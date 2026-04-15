@@ -4,6 +4,7 @@ export type IncidentSeverity = "info" | "warning" | "error" | "critical";
 
 export type Incident = {
   id: string;
+  runtime?: string;
   source: string;
   service: string;
   severity: IncidentSeverity;
@@ -11,6 +12,7 @@ export type Incident = {
   summary: string;
   probableCause?: string;
   relatedRunId?: string;
+  fingerprint?: string;
   rawExcerpt?: string;
 };
 

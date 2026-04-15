@@ -10,6 +10,7 @@ export class DockerServiceSampleCollector implements IncidentCollector {
     return [
       {
         id: "inc-docker-001",
+        runtime: "docker",
         source: "docker",
         service: "mail-case-api",
         severity: "warning",

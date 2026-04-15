@@ -10,6 +10,7 @@ export class PaperclipSampleCollector implements IncidentCollector {
     return [
       {
         id: "inc-paperclip-001",
+        runtime: "paperclip",
         source: "paperclip",
         service: "agent-runtime",
         severity: "error",

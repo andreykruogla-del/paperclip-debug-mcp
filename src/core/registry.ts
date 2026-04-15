@@ -1,5 +1,6 @@
 import type { IncidentCollector } from "./collector-interface.js";
 import type { CollectorStatus, Incident } from "./types.js";
+import { computeFingerprint } from "./incident-analysis.js";
 
 export class CollectorRegistry {
   private readonly collectors: IncidentCollector[] = [];
@@ -22,6 +23,12 @@ export class CollectorRegistry {
         .filter((collector) => collector.enabled)
         .map(async (collector) => collector.collectIncidents())
     );
-    return chunks.flat().sort((a, b) => b.timestamp - a.timestamp);
+    return chunks
+      .flat()
+      .map((incident) => ({
+        ...incident,
+        fingerprint: incident.fingerprint ?? computeFingerprint(incident)
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp);
   }
 }
