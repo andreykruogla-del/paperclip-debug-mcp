@@ -13,18 +13,18 @@ export function createMcpServer(): McpServer {
 
   const server = new McpServer(
     {
-      name: "paperclip-triage",
+      name: "paperclip-debug-mcp",
       version: "0.1.0"
     },
     {
       instructions:
-        "Paperclip Triage exposes normalized incidents and collector health. " +
+        "Paperclip Debug MCP exposes normalized incidents and collector health. " +
         "Use list_collectors first, then list_incidents."
     }
   );
 
   server.registerTool(
-    "paperclipTriage.list_collectors",
+    "paperclipDebug.list_collectors",
     {
       title: "List collectors",
       description: "Returns enabled collectors and their kinds.",
@@ -40,7 +40,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
-    "paperclipTriage.list_incidents",
+    "paperclipDebug.list_incidents",
     {
       title: "List incidents",
       description: "Returns normalized incidents from all enabled collectors.",
@@ -64,7 +64,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
-    "paperclipTriage.list_incident_clusters",
+    "paperclipDebug.list_incident_clusters",
     {
       title: "List incident clusters",
       description:

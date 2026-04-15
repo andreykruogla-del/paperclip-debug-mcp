@@ -1,8 +1,8 @@
 {
-  "name": "paperclip-triage",
+  "name": "paperclip-debug-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP-first incident triage layer for Paperclip agent systems",
+  "description": "MCP-first debugging and incident intelligence layer for Paperclip agent systems",
   "type": "module",
   "scripts": {
     "build": "npx tsc -p tsconfig.json",
@@ -12,8 +12,12 @@
   "keywords": [
     "paperclip",
     "mcp",
-    "triage",
-    "incident"
+    "debugging",
+    "incident",
+    "agents",
+    "hermes",
+    "openclaw",
+    "opencode"
   ],
   "license": "MIT",
   "dependencies": {

@@ -9,6 +9,6 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[paperclip-triage] failed to start MCP stdio server: ${message}`);
+  console.error(`[paperclip-debug-mcp] failed to start MCP stdio server: ${message}`);
   process.exit(1);
 });
