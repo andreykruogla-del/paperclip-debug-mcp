@@ -2,6 +2,41 @@
 
 This playbook provides practical, scenario-based tool sequences for incident triage.
 
+## Quick decision matrix (under pressure)
+
+| Dominant signal | Recommended next chain | Stop condition |
+|---|---|---|
+| High/critical incident pressure in snapshot or prioritization | `paperclipDebug.prioritize_incidents` -> `paperclipDebug.list_incident_clusters` -> `paperclipDebug.incident_trends` | Top high/critical set is stable, clustered, and has a clear owner path. |
+| Run-linked incidents or uncertain handoff ownership | `paperclipDebug.get_run_events` -> `paperclipDebug.trace_handoff` -> `paperclipDebug.build_incident_packet` | Timeline and ownership path are explicit enough for handoff/escalation. |
+| Issue-first investigation with unclear runtime impact | `paperclipDebug.get_issue_comments` -> `paperclipDebug.build_incident_packet` -> `paperclipDebug.prioritize_incidents` | Issue context, related run context, and correlated incident impact are all captured. |
+| Problematic services dominate | `paperclipDebug.list_services` -> `paperclipDebug.get_service_logs` -> `paperclipDebug.prioritize_incidents` | Service-level failure signature is confirmed or ruled out as primary driver. |
+| Dependency adapter health is degraded (`configured: false` or `reachable: false`) | `<adapter>_health` -> `paperclipDebug.refresh_collectors` -> `paperclipDebug.prioritize_incidents` | Adapter state is either remediated or clearly declared as current root-cause candidate. |
+
+## Role-focused quick paths
+
+### Incident commander (fast coordination path)
+
+Use when you need fast scope, priority, and assignment under time pressure.
+
+1. `paperclipDebug.system_snapshot`
+2. `paperclipDebug.prioritize_incidents` with `minBand=high`
+3. `paperclipDebug.list_incident_clusters`
+4. `paperclipDebug.build_incident_packet` with top `issueId` or `runId` from current signals
+
+Stop when:
+- A clear top incident set, active owner, and next executable remediation path are documented.
+
+### Implementation operator (deep execution path)
+
+Use when you own remediation and need root-cause confirmation before changes.
+
+1. Pick the dominant branch: run path, issue path, service path, or dependency adapter path.
+2. Execute that branch end-to-end.
+3. Re-run `paperclipDebug.prioritize_incidents` to confirm impact shift.
+
+Stop when:
+- Root-cause candidate is evidence-backed and either mitigation is applied or rollback/escalation is decided.
+
 ## 1) Preflight on a new environment
 
 When to use:
@@ -20,6 +55,9 @@ Look for:
 Next step:
 - If configuration errors appear, fix `.env` first.
 - If preflight is healthy, continue with fast triage.
+
+Stop condition:
+- All required collectors/dependencies are either healthy or explicitly marked as intentionally unavailable.
 
 ## 2) Fast triage
 
@@ -41,6 +79,9 @@ Next step:
 - If service signals dominate, use Service outage path.
 - If one run/issue dominates, pivot to run-centered or issue-centered investigation.
 
+Stop condition:
+- You can route work to one dominant path (run, issue, service, or adapter) without ambiguity.
+
 ## 3) Failed run investigation
 
 When to use:
@@ -58,6 +99,9 @@ Look for:
 Next step:
 - If run maps to an issue, build an incident packet for handoff.
 - If signals point to infra dependency, run the relevant adapter path.
+
+Stop condition:
+- Run timeline, handoff boundaries, and next owner are clear enough to execute or escalate.
 
 ## 4) Issue-centered investigation
 
@@ -77,6 +121,9 @@ Next step:
 - Use packet output for team handoff or archive.
 - If linked run/service is clear, jump to run/service deep dive.
 
+Stop condition:
+- Issue thread context and packet evidence are sufficient for a concrete next action.
+
 ## 5) Service outage path
 
 When to use:
@@ -94,6 +141,9 @@ Look for:
 Next step:
 - If dependency-specific symptoms appear, run the matching adapter scenario.
 - If service state normalizes, return to incident clustering/trend analysis.
+
+Stop condition:
+- Service-level causality is confirmed or confidently ruled out.
 
 ## 6) Dependency adapter paths
 
@@ -113,6 +163,9 @@ Look for:
 Next step:
 - If unhealthy, treat WordPress dependency as active root-cause candidate.
 
+Stop condition:
+- WordPress is either healthy enough to deprioritize or clearly part of the active incident driver set.
+
 ### 6b) Caddy path
 
 When to use:
@@ -128,6 +181,9 @@ Look for:
 
 Next step:
 - If unhealthy, prioritize proxy/ingress remediation before deeper app-level analysis.
+
+Stop condition:
+- Caddy is stabilized or explicitly escalated as unresolved external blocker.
 
 ### 6c) Sentry path
 
@@ -145,6 +201,9 @@ Look for:
 Next step:
 - If exception pressure is high, prioritize fixes for top recurring exception classes.
 
+Stop condition:
+- Exception pressure trend is actionable (decreasing with mitigation or escalating with clear owner).
+
 ### 6d) Kubernetes path
 
 When to use:
@@ -160,6 +219,9 @@ Look for:
 
 Next step:
 - If namespace health is degraded, prioritize cluster/pod remediation path.
+
+Stop condition:
+- Pod/namespace instability is either mitigated or confirmed as blocker for app-level triage.
 
 ### 6e) PostgreSQL path
 
@@ -177,6 +239,9 @@ Look for:
 Next step:
 - If DB health is degraded, prioritize DB-level mitigation before app-only changes.
 
+Stop condition:
+- DB pressure is either reduced to acceptable triage level or declared the primary blocker.
+
 ### 6f) Redis path
 
 When to use:
@@ -192,6 +257,9 @@ Look for:
 
 Next step:
 - If Redis health is degraded, prioritize cache/queue stabilization actions.
+
+Stop condition:
+- Redis pressure is normalized or explicitly declared as active blocking dependency.
 
 ## 7) Evidence export and benchmarking
 
