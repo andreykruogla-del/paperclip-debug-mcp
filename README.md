@@ -144,7 +144,7 @@ Current scope:
 - Paperclip API collector (issues/comments/runs/events)
 - Docker collector (services + logs)
 - Filesystem log collector (host log files via configured paths)
-- WordPress health collector (REST availability, XML-RPC, auth check)
+- Optional WordPress health collector (REST availability, XML-RPC, auth check)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export
@@ -169,14 +169,23 @@ See [docs/runtime-profiles.md](docs/runtime-profiles.md) for ready `.env` profil
 No.  
 The architecture is collector-based. Any runtime can be integrated if it maps into normalized incidents/events.
 
-## Target adapters
+## Core Stack Adapters
 
 - `Paperclip`
-- `WordPress`
 - `Hermes Agent`
 - `OpenClaw`
 - `OpenCode`
+- `Telegram bridge`
 - local coding runtimes (`Codex`, `Claude`, `Cursor`) via runtime signals
+
+## Optional Ecosystem Adapters
+
+- `WordPress`
+- `Kubernetes`
+- `PostgreSQL`
+- `Redis`
+- `Caddy` / `Nginx`
+- `Sentry`
 
 ## Practical Outcome
 
