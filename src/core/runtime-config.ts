@@ -4,6 +4,7 @@ export type RuntimeConfig = {
   enableFileCollector: boolean;
   enableWordpressCollector: boolean;
   enableCaddyCollector: boolean;
+  enableSentryCollector: boolean;
   fileCollectorPathsCount: number;
   fileCollectorMaxLines: number;
   fileCollectorPattern: string;
@@ -17,6 +18,9 @@ export type RuntimeConfig = {
   hasWordpressAuth: boolean;
   hasCaddyHealthUrl: boolean;
   hasCaddyLogPath: boolean;
+  hasSentryOrgSlug: boolean;
+  hasSentryProjectSlug: boolean;
+  hasSentryAuthToken: boolean;
   paperclipMaxIssues: number;
 };
 
@@ -47,6 +51,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     enableFileCollector: parseBoolean(env.FILE_COLLECTOR_ENABLED, false),
     enableWordpressCollector: parseBoolean(env.WORDPRESS_COLLECTOR_ENABLED, false),
     enableCaddyCollector: parseBoolean(env.CADDY_COLLECTOR_ENABLED, false),
+    enableSentryCollector: parseBoolean(env.SENTRY_COLLECTOR_ENABLED, false),
     fileCollectorPathsCount: fileCollectorPaths.length,
     fileCollectorMaxLines: Math.min(parsePositiveInt(env.FILE_COLLECTOR_MAX_LINES, 300), 5000),
     fileCollectorPattern,
@@ -65,6 +70,9 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     ),
     hasCaddyHealthUrl: Boolean(env.CADDY_HEALTH_URL && env.CADDY_HEALTH_URL.trim().length > 0),
     hasCaddyLogPath: Boolean(env.CADDY_LOG_PATH && env.CADDY_LOG_PATH.trim().length > 0),
+    hasSentryOrgSlug: Boolean(env.SENTRY_ORG_SLUG && env.SENTRY_ORG_SLUG.trim().length > 0),
+    hasSentryProjectSlug: Boolean(env.SENTRY_PROJECT_SLUG && env.SENTRY_PROJECT_SLUG.trim().length > 0),
+    hasSentryAuthToken: Boolean(env.SENTRY_AUTH_TOKEN && env.SENTRY_AUTH_TOKEN.trim().length > 0),
     paperclipMaxIssues: Math.min(parsePositiveInt(env.PAPERCLIP_MAX_ISSUES, 25), 200)
   };
 }

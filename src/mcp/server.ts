@@ -5,6 +5,7 @@ import { CaddyHealthCollector } from "../collectors/caddy-health-collector.js";
 import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
+import { SentryHealthCollector } from "../collectors/sentry-health-collector.js";
 import { WordPressHealthCollector } from "../collectors/wordpress-health-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
@@ -18,6 +19,7 @@ import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
 import { CaddyClient } from "../integrations/caddy-client.js";
+import { SentryClient } from "../integrations/sentry-client.js";
 import { WordPressClient } from "../integrations/wordpress-client.js";
 
 export function createMcpServer(): McpServer {
@@ -36,6 +38,11 @@ export function createMcpServer(): McpServer {
     })
   );
   registry.register(
+    new SentryHealthCollector({
+      enabled: runtimeConfig.enableSentryCollector
+    })
+  );
+  registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,
       maxLines: runtimeConfig.fileCollectorMaxLines,
@@ -49,6 +56,7 @@ export function createMcpServer(): McpServer {
   );
   const paperclipClient = new PaperclipApiClient();
   const caddyClient = new CaddyClient();
+  const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
   const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);
@@ -113,6 +121,32 @@ export function createMcpServer(): McpServer {
         };
       }
       const payload = await caddyClient.checkHealth();
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.sentry_health",
+    {
+      title: "Sentry health check",
+      description: "Runs Sentry unresolved issue diagnostic check.",
+      inputSchema: {}
+    },
+    async () => {
+      if (!sentryClient.isEnabled()) {
+        const payload = {
+          configured: false,
+          error: "Sentry is not configured. Set SENTRY_ORG_SLUG, SENTRY_PROJECT_SLUG, SENTRY_AUTH_TOKEN."
+        };
+        return {
+          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+        };
+      }
+      const payload = await sentryClient.checkHealth(20);
       return {
         structuredContent: payload,
         content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]

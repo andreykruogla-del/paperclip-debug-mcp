@@ -57,6 +57,14 @@ Use this when ingestion/update flow depends on WordPress API availability.
 
 Use this when ingress/HTTPS/proxy behavior is suspicious.
 
+## 4d) Sentry production-error path
+
+1. `paperclipDebug.sentry_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when you need fast visibility into unresolved production exceptions.
+
 ## 5) Evidence export
 
 ```bash

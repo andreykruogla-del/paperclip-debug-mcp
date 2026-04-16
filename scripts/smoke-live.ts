@@ -4,6 +4,7 @@ import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
 import { CaddyClient } from "../src/integrations/caddy-client.js";
+import { SentryClient } from "../src/integrations/sentry-client.js";
 import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
 async function main(): Promise<void> {
@@ -12,6 +13,7 @@ async function main(): Promise<void> {
     at: new Date().toISOString()
   };
   const caddyClient = new CaddyClient();
+  const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
 
   if (paperclipClient.isEnabled()) {
@@ -121,6 +123,28 @@ async function main(): Promise<void> {
     report.wordpress = {
       status: "skipped",
       reason: "WORDPRESS_BASE_URL is not set"
+    };
+  }
+
+  if (sentryClient.isEnabled()) {
+    try {
+      const health = await sentryClient.checkHealth(10);
+      report.sentry = {
+        status: health.reachable ? "ok" : "error",
+        reachable: health.reachable,
+        unresolvedIssues: health.unresolvedIssues,
+        highSeverityIssues: health.highSeverityIssues
+      };
+    } catch (error: unknown) {
+      report.sentry = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.sentry = {
+      status: "skipped",
+      reason: "SENTRY_ORG_SLUG/SENTRY_PROJECT_SLUG/SENTRY_AUTH_TOKEN are not set"
     };
   }
 

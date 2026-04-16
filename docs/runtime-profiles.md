@@ -59,6 +59,18 @@ CADDY_LOG_TAIL_LINES=300
 
 Use this when your stack depends on Caddy and you need fast proxy-layer diagnostics.
 
+## 6) Add Sentry production-error checks
+
+```bash
+SENTRY_COLLECTOR_ENABLED=true
+SENTRY_BASE_URL=https://sentry.io/api/0
+SENTRY_ORG_SLUG=your-org
+SENTRY_PROJECT_SLUG=your-project
+SENTRY_AUTH_TOKEN=sntrys_xxx
+```
+
+Use this when you need read-only production error context in the same MCP flow.
+
 ## Verification sequence
 
 After changing profile:
@@ -70,5 +82,6 @@ After changing profile:
    - `paperclipDebug.list_collectors`
    - `paperclipDebug.caddy_health`
    - `paperclipDebug.wordpress_health`
+   - `paperclipDebug.sentry_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

@@ -106,6 +106,12 @@ CADDY_HEALTH_URL=                # e.g. https://paperclip.example.com/healthz
 CADDY_LOG_PATH=                  # optional caddy log path
 CADDY_LOG_TAIL_LINES=200
 
+SENTRY_COLLECTOR_ENABLED=false
+SENTRY_BASE_URL=https://sentry.io/api/0
+SENTRY_ORG_SLUG=
+SENTRY_PROJECT_SLUG=
+SENTRY_AUTH_TOKEN=
+
 # Future optional adapters (template)
 # K8S_COLLECTOR_ENABLED=false
 # K8S_NAMESPACE=
@@ -113,8 +119,6 @@ CADDY_LOG_TAIL_LINES=200
 # POSTGRES_URL=
 # REDIS_COLLECTOR_ENABLED=false
 # REDIS_URL=
-# SENTRY_COLLECTOR_ENABLED=false
-# SENTRY_DSN=
 ```
 
 Start from [`.env.example`](.env.example).
@@ -146,6 +150,7 @@ When adding any new optional adapter, update both:
 
 - `paperclipDebug.wordpress_health`
 - `paperclipDebug.caddy_health`
+- `paperclipDebug.sentry_health`
 
 ## Transport Modes
 
@@ -177,6 +182,7 @@ Current scope:
 - Filesystem log collector (host log files via configured paths)
 - Optional WordPress health collector (REST availability, XML-RPC, auth check)
 - Optional Caddy health collector (health endpoint and proxy log diagnostics)
+- Optional Sentry health collector (unresolved/high-severity issue diagnostics)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export
