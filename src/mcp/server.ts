@@ -18,6 +18,7 @@ import { buildIncidentPacket } from "../core/incident-packet.js";
 import { prioritizeIncidents } from "../core/incident-priority.js";
 import { readRuntimeConfig } from "../core/runtime-config.js";
 import {
+  buildIncidentPacketGuidance,
   buildPrioritizeTriageGuidance,
   buildSystemSnapshotTriageGuidance
 } from "../core/triage-guidance.js";
@@ -743,6 +744,7 @@ export function createMcpServer(): McpServer {
         runEvents,
         allIncidents
       });
+      const packetGuidance = buildIncidentPacketGuidance({ packet });
 
       return {
         structuredContent: {
@@ -754,7 +756,10 @@ export function createMcpServer(): McpServer {
             runEvents: packet.runEvents?.length ?? 0,
             relatedIncidents: packet.relatedIncidents.length,
             clusters: packet.clusters.length
-          }
+          },
+          topSignals: packetGuidance.topSignals,
+          recommendedNextTools: packetGuidance.recommendedNextTools,
+          packetReadiness: packetGuidance.packetReadiness
         },
         content: [
           {
@@ -769,7 +774,10 @@ export function createMcpServer(): McpServer {
                   runEvents: packet.runEvents?.length ?? 0,
                   relatedIncidents: packet.relatedIncidents.length,
                   clusters: packet.clusters.length
-                }
+                },
+                topSignals: packetGuidance.topSignals,
+                recommendedNextTools: packetGuidance.recommendedNextTools,
+                packetReadiness: packetGuidance.packetReadiness
               },
               null,
               2
