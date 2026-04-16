@@ -3,12 +3,14 @@ import { PaperclipApiClient } from "../src/integrations/paperclip-client.js";
 import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
+import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
 async function main(): Promise<void> {
   const paperclipClient = new PaperclipApiClient();
   const report: Record<string, unknown> = {
     at: new Date().toISOString()
   };
+  const wordpressClient = new WordPressClient();
 
   if (paperclipClient.isEnabled()) {
     try {
@@ -71,6 +73,30 @@ async function main(): Promise<void> {
     report.docker = {
       status: "error",
       error: error instanceof Error ? error.message : String(error)
+    };
+  }
+
+  if (wordpressClient.isEnabled()) {
+    try {
+      const health = await wordpressClient.checkHealth();
+      report.wordpress = {
+        status: health.reachable ? "ok" : "error",
+        reachable: health.reachable,
+        restApiAvailable: health.restApiAvailable,
+        xmlrpcEnabled: health.xmlrpcEnabled,
+        authChecked: health.authChecked,
+        authOk: health.authOk
+      };
+    } catch (error: unknown) {
+      report.wordpress = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.wordpress = {
+      status: "skipped",
+      reason: "WORDPRESS_BASE_URL is not set"
     };
   }
 

@@ -7,6 +7,7 @@ import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js"
 import { WordPressHealthCollector } from "../collectors/wordpress-health-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
+import { buildIncidentTrends } from "../core/incident-trends.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
 import { buildIncidentPacket } from "../core/incident-packet.js";
 import { prioritizeIncidents } from "../core/incident-priority.js";
@@ -182,6 +183,26 @@ export function createMcpServer(): McpServer {
             )
           }
         ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.incident_trends",
+    {
+      title: "Incident trends",
+      description: "Returns incident trend buckets for the selected time window.",
+      inputSchema: {
+        windowHours: z.number().int().positive().max(24 * 14).optional(),
+        bucketMinutes: z.number().int().positive().max(24 * 60).optional()
+      }
+    },
+    async ({ windowHours, bucketMinutes }) => {
+      const incidents = await registry.collectAllIncidents();
+      const trends = buildIncidentTrends(incidents, { windowHours, bucketMinutes });
+      return {
+        structuredContent: trends,
+        content: [{ type: "text", text: JSON.stringify(trends, null, 2) }]
       };
     }
   );

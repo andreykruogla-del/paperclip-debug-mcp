@@ -7,6 +7,7 @@ This playbook gives ready-to-run diagnostic sequences for coding agents.
 1. `paperclipDebug.system_snapshot`
 2. `paperclipDebug.prioritize_incidents` with `minBand=high`
 3. `paperclipDebug.list_services` with `includeHealthy=false`
+4. `paperclipDebug.incident_trends` with `windowHours=24`, `bucketMinutes=60`
 
 Use this when you need immediate operational focus.
 

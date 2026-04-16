@@ -103,6 +103,7 @@ Start from [`.env.example`](.env.example).
 - `paperclipDebug.refresh_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
+- `paperclipDebug.incident_trends`
 - `paperclipDebug.prioritize_incidents`
 - `paperclipDebug.trace_handoff`
 - `paperclipDebug.list_runs`
