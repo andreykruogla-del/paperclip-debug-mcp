@@ -154,6 +154,7 @@ npm run collector:new -- --name wordpress --kind external
 
 See [docs/mcp-playbook.md](docs/mcp-playbook.md) for ready diagnostic call sequences.
 See [docs/collector-adapter-guide.md](docs/collector-adapter-guide.md) to add new runtime adapters.
+See [docs/runtime-profiles.md](docs/runtime-profiles.md) for ready `.env` profiles (Paperclip/Docker/Hermes/OpenClaw/OpenCode).
 
 ## Works only with one stack?
 
