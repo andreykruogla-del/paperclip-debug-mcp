@@ -54,6 +54,7 @@ It is intentionally repository-focused and does not assume package publishing au
 - [ ] `npm run test`
 - [ ] `npm run build`
 - [ ] CI `build-and-test` equivalent checks are green for the PR branch.
+- [ ] Record CI evidence (PR/branch id plus check/run URL and conclusion) in the readiness report.
 
 ## 7) Documentation/runtime alignment
 

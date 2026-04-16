@@ -2,7 +2,8 @@
 
 ## Current assessment
 
-Current release-candidate status is **conditionally ready**, with a strong repository-level baseline and a small set of remaining validation blockers before a confident public-beta go decision.
+Current release-candidate status is **almost ready but still blocked by one environment-dependent validation gap**.
+Since the previous pass, hosted CI confirmation has been closed; the remaining blocker is configured Paperclip-backed live validation.
 
 Evidence used in this pass:
 
@@ -16,6 +17,8 @@ Evidence used in this pass:
   - `npm run check`
   - `npm run test`
   - `npm run build`
+- Branch/PR CI evidence:
+  - PR `#23` (`codex/run-release-candidate-validation`) check `build-and-test`: `SUCCESS`
 
 ## What is already ready
 
@@ -37,6 +40,7 @@ Evidence used in this pass:
 - `npm run check`: pass
 - `npm run test`: pass
 - `npm run build`: pass
+- Hosted CI for the prior release-candidate branch (`PR #23`) is green (`build-and-test`: success).
 
 5. Documentation/readiness structure
 - Public-beta checklist exists and now captures skipped-item recording and port-conflict handling.
@@ -45,7 +49,8 @@ Evidence used in this pass:
 ## What is not yet fully validated
 
 1. Paperclip-backed runtime paths in this environment
-- `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, and `PAPERCLIP_COMPANY_ID` are not set locally, so Paperclip-specific live validation was skipped.
+- `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, and `PAPERCLIP_PROJECT_ID` are not set in the available environment.
+- `smoke:live` therefore reports Paperclip checks as `skipped`, and live run/issue path validation cannot be completed from this environment.
 
 2. Optional adapter deep validation
 - WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this local pass, so only skip-path behavior was validated.
@@ -53,16 +58,10 @@ Evidence used in this pass:
 3. Auth-enabled HTTP transport behavior
 - `MCP_HTTP_AUTH_TOKEN` was not set in this pass, so token-protected HTTP validation was not executed.
 
-4. CI check status for this specific candidate branch
-- Local checks are green, but hosted CI status must be confirmed on the release-candidate PR branch.
-
 ## Blocking issues before public beta
 
 1. Missing configured-environment validation for Paperclip-backed investigation flow
 - A release-candidate pass must include a real environment where Paperclip credentials are set and core issue/run tools are exercised live.
-
-2. Missing hosted CI confirmation on candidate branch
-- Public-beta decision should wait for green branch checks (including `build-and-test`) in the PR context.
 
 ## Non-blocking follow-ups after public beta
 
@@ -77,10 +76,10 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: No-go for final public beta announcement yet; proceed with a short blocker-closure cycle.**
+**Recommendation: No-go for final public beta announcement yet; close one remaining blocker first.**
 
 Reasoning:
 
-- Repository baseline is strong (local quality gates, docs structure, and transport baseline are ready).
-- Two concrete blockers remain: configured Paperclip-backed live validation and hosted CI confirmation on the candidate branch.
-- Once those two blockers are closed, the repository is in a credible position for a public-beta go decision without product-scope changes.
+- Repository baseline is strong (local quality gates, docs structure, transport baseline, and candidate-branch hosted CI confirmation are ready).
+- The blocker list is now reduced to one precise item: configured Paperclip-backed live validation.
+- Once that environment-specific validation is completed and recorded, the project can move to a credible public-beta go decision without scope expansion.
