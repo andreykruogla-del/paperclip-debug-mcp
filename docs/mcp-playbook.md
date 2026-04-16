@@ -81,6 +81,14 @@ Use this when agent runtimes are in k8s and pod health is suspect.
 
 Use this when DB load/locks/replication may be impacting agent flows.
 
+## 4g) Redis dependency path
+
+1. `paperclipDebug.redis_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when queue/cache symptoms suggest memory pressure or connection saturation.
+
 ## 5) Evidence export
 
 ```bash

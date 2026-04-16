@@ -89,6 +89,15 @@ POSTGRES_URL=postgres://user:password@db-host:5432/database
 
 Use this for read-only DB health checks (locks, long-running queries, replication lag).
 
+## 9) Add Redis diagnostics
+
+```bash
+REDIS_COLLECTOR_ENABLED=true
+REDIS_URL=redis://localhost:6379/0
+```
+
+Use this for read-only cache-layer diagnostics (latency, evictions, rejected connections).
+
 ## Verification sequence
 
 After changing profile:
@@ -103,5 +112,6 @@ After changing profile:
    - `paperclipDebug.k8s_health`
    - `paperclipDebug.sentry_health`
    - `paperclipDebug.postgres_health`
+   - `paperclipDebug.redis_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

@@ -6,6 +6,7 @@ import { FileSystemLogCollector } from "../src/collectors/filesystem-log-collect
 import { K8sHealthCollector } from "../src/collectors/k8s-health-collector.js";
 import { PaperclipApiCollector } from "../src/collectors/paperclip-api-collector.js";
 import { PostgresHealthCollector } from "../src/collectors/postgres-health-collector.js";
+import { RedisHealthCollector } from "../src/collectors/redis-health-collector.js";
 import { SentryHealthCollector } from "../src/collectors/sentry-health-collector.js";
 import { WordPressHealthCollector } from "../src/collectors/wordpress-health-collector.js";
 import { prioritizeIncidents } from "../src/core/incident-priority.js";
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
   registry.register(new SentryHealthCollector({ enabled: runtimeConfig.enableSentryCollector }));
   registry.register(new K8sHealthCollector({ enabled: runtimeConfig.enableK8sCollector }));
   registry.register(new PostgresHealthCollector({ enabled: runtimeConfig.enablePostgresCollector }));
+  registry.register(new RedisHealthCollector({ enabled: runtimeConfig.enableRedisCollector }));
   registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,

@@ -6,6 +6,7 @@ import { listIssues } from "../src/integrations/paperclip-issues.js";
 import { CaddyClient } from "../src/integrations/caddy-client.js";
 import { K8sClient } from "../src/integrations/k8s-client.js";
 import { PostgresClient } from "../src/integrations/postgres-client.js";
+import { RedisClient } from "../src/integrations/redis-client.js";
 import { SentryClient } from "../src/integrations/sentry-client.js";
 import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   const caddyClient = new CaddyClient();
   const k8sClient = new K8sClient();
   const postgresClient = new PostgresClient();
+  const redisClient = new RedisClient();
   const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
 
@@ -194,6 +196,29 @@ async function main(): Promise<void> {
     report.postgres = {
       status: "skipped",
       reason: "POSTGRES_URL is not set"
+    };
+  }
+
+  if (redisClient.isEnabled()) {
+    try {
+      const health = await redisClient.checkHealth();
+      report.redis = {
+        status: health.reachable ? "ok" : "error",
+        reachable: health.reachable,
+        pingMs: health.pingMs,
+        evictedKeys: health.evictedKeys,
+        rejectedConnections: health.rejectedConnections
+      };
+    } catch (error: unknown) {
+      report.redis = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.redis = {
+      status: "skipped",
+      reason: "REDIS_URL is not set"
     };
   }
 

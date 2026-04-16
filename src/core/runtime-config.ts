@@ -7,6 +7,7 @@ export type RuntimeConfig = {
   enableSentryCollector: boolean;
   enableK8sCollector: boolean;
   enablePostgresCollector: boolean;
+  enableRedisCollector: boolean;
   fileCollectorPathsCount: number;
   fileCollectorMaxLines: number;
   fileCollectorPattern: string;
@@ -25,6 +26,7 @@ export type RuntimeConfig = {
   hasSentryAuthToken: boolean;
   hasK8sNamespace: boolean;
   hasPostgresUrl: boolean;
+  hasRedisUrl: boolean;
   paperclipMaxIssues: number;
 };
 
@@ -58,6 +60,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     enableSentryCollector: parseBoolean(env.SENTRY_COLLECTOR_ENABLED, false),
     enableK8sCollector: parseBoolean(env.K8S_COLLECTOR_ENABLED, false),
     enablePostgresCollector: parseBoolean(env.POSTGRES_COLLECTOR_ENABLED, false),
+    enableRedisCollector: parseBoolean(env.REDIS_COLLECTOR_ENABLED, false),
     fileCollectorPathsCount: fileCollectorPaths.length,
     fileCollectorMaxLines: Math.min(parsePositiveInt(env.FILE_COLLECTOR_MAX_LINES, 300), 5000),
     fileCollectorPattern,
@@ -81,6 +84,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     hasSentryAuthToken: Boolean(env.SENTRY_AUTH_TOKEN && env.SENTRY_AUTH_TOKEN.trim().length > 0),
     hasK8sNamespace: Boolean(env.K8S_NAMESPACE && env.K8S_NAMESPACE.trim().length > 0),
     hasPostgresUrl: Boolean(env.POSTGRES_URL && env.POSTGRES_URL.trim().length > 0),
+    hasRedisUrl: Boolean(env.REDIS_URL && env.REDIS_URL.trim().length > 0),
     paperclipMaxIssues: Math.min(parsePositiveInt(env.PAPERCLIP_MAX_ISSUES, 25), 200)
   };
 }
