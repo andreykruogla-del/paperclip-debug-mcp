@@ -21,7 +21,7 @@ Creates:
 Each collector must implement:
 
 - `id: string`
-- `kind: "paperclip" | "docker_service" | "external"`
+- `kind: "paperclip" | "docker_service" | "wordpress" | "external"`
 - `enabled: boolean`
 - `collectIncidents(): Promise<Incident[]>`
 
