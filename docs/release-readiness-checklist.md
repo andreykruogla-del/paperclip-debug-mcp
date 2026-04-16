@@ -34,6 +34,7 @@ It is intentionally repository-focused and does not assume package publishing au
 ### HTTP transport
 - [ ] `npm run mcp:http`
 - [ ] Verify `/healthz` returns healthy response.
+- [ ] If default port `8787` is already occupied in your environment, rerun with a temporary override (for example `MCP_HTTP_PORT=8799`) and record the chosen port in the validation note.
 - [ ] If auth is enabled, verify token-protected access behavior.
 
 ## 5) Core triage-path sanity check
@@ -68,3 +69,4 @@ It is intentionally repository-focused and does not assume package publishing au
   - what is ready for public beta now,
   - what remains intentionally out of scope for this release,
   - whether package publication is explicitly deferred.
+- [ ] For every skipped validation item, record a concrete reason (for example missing credentials, unavailable external source, or not-enabled optional adapter).

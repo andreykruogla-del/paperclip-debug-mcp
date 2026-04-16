@@ -74,6 +74,8 @@ This project overlaps with adjacent categories, but sits in a specific layer:
 
 5. Release hygiene maturity
 - CI/release discipline is improving, but still a critical gate for publish confidence.
+6. Environment-dependent validation completeness
+- Full public-beta confidence still depends on running the same validation pass in a configured environment with Paperclip credentials and selected dependency adapters.
 
 ## Must-have before public beta
 
