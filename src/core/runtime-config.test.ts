@@ -11,6 +11,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.enableWordpressCollector).toBe(false);
     expect(cfg.enableCaddyCollector).toBe(false);
     expect(cfg.enableSentryCollector).toBe(false);
+    expect(cfg.enableK8sCollector).toBe(false);
     expect(cfg.fileCollectorPathsCount).toBe(0);
     expect(cfg.fileCollectorMaxLines).toBe(300);
     expect(cfg.mcpHttpPort).toBe(8787);
@@ -22,6 +23,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.hasSentryOrgSlug).toBe(false);
     expect(cfg.hasSentryProjectSlug).toBe(false);
     expect(cfg.hasSentryAuthToken).toBe(false);
+    expect(cfg.hasK8sNamespace).toBe(false);
     expect(cfg.paperclipMaxIssues).toBe(25);
   });
 
@@ -33,6 +35,7 @@ describe("readRuntimeConfig", () => {
       WORDPRESS_COLLECTOR_ENABLED: "true",
       CADDY_COLLECTOR_ENABLED: "1",
       SENTRY_COLLECTOR_ENABLED: "true",
+      K8S_COLLECTOR_ENABLED: "true",
       FILE_COLLECTOR_PATHS: "/tmp/a.log;/tmp/b.log",
       FILE_COLLECTOR_MAX_LINES: "9999",
       FILE_COLLECTOR_INCLUDE_PATTERN: "panic|fatal",
@@ -46,6 +49,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.enableWordpressCollector).toBe(true);
     expect(cfg.enableCaddyCollector).toBe(true);
     expect(cfg.enableSentryCollector).toBe(true);
+    expect(cfg.enableK8sCollector).toBe(true);
     expect(cfg.fileCollectorPathsCount).toBe(2);
     expect(cfg.fileCollectorMaxLines).toBe(5000);
     expect(cfg.fileCollectorPattern).toBe("panic|fatal");
@@ -67,7 +71,8 @@ describe("readRuntimeConfig", () => {
       CADDY_LOG_PATH: "/var/log/caddy/error.log",
       SENTRY_ORG_SLUG: "simfi",
       SENTRY_PROJECT_SLUG: "paperclip",
-      SENTRY_AUTH_TOKEN: "sntrys_123"
+      SENTRY_AUTH_TOKEN: "sntrys_123",
+      K8S_NAMESPACE: "paperclip"
     });
     expect(cfg.hasPaperclipBaseUrl).toBe(true);
     expect(cfg.hasPaperclipToken).toBe(true);
@@ -80,5 +85,6 @@ describe("readRuntimeConfig", () => {
     expect(cfg.hasSentryOrgSlug).toBe(true);
     expect(cfg.hasSentryProjectSlug).toBe(true);
     expect(cfg.hasSentryAuthToken).toBe(true);
+    expect(cfg.hasK8sNamespace).toBe(true);
   });
 });

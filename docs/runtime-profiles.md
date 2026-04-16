@@ -71,6 +71,15 @@ SENTRY_AUTH_TOKEN=sntrys_xxx
 
 Use this when you need read-only production error context in the same MCP flow.
 
+## 7) Add Kubernetes namespace checks
+
+```bash
+K8S_COLLECTOR_ENABLED=true
+K8S_NAMESPACE=paperclip
+```
+
+Use this when part of your stack is deployed in Kubernetes and you need pod-level health signals.
+
 ## Verification sequence
 
 After changing profile:
@@ -82,6 +91,7 @@ After changing profile:
    - `paperclipDebug.list_collectors`
    - `paperclipDebug.caddy_health`
    - `paperclipDebug.wordpress_health`
+   - `paperclipDebug.k8s_health`
    - `paperclipDebug.sentry_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

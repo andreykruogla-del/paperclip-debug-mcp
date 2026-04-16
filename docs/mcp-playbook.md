@@ -65,6 +65,14 @@ Use this when ingress/HTTPS/proxy behavior is suspicious.
 
 Use this when you need fast visibility into unresolved production exceptions.
 
+## 4e) Kubernetes namespace path
+
+1. `paperclipDebug.k8s_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when agent runtimes are in k8s and pod health is suspect.
+
 ## 5) Evidence export
 
 ```bash

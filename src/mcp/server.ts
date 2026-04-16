@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CaddyHealthCollector } from "../collectors/caddy-health-collector.js";
 import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
+import { K8sHealthCollector } from "../collectors/k8s-health-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
 import { SentryHealthCollector } from "../collectors/sentry-health-collector.js";
 import { WordPressHealthCollector } from "../collectors/wordpress-health-collector.js";
@@ -19,6 +20,7 @@ import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
 import { CaddyClient } from "../integrations/caddy-client.js";
+import { K8sClient } from "../integrations/k8s-client.js";
 import { SentryClient } from "../integrations/sentry-client.js";
 import { WordPressClient } from "../integrations/wordpress-client.js";
 
@@ -43,6 +45,11 @@ export function createMcpServer(): McpServer {
     })
   );
   registry.register(
+    new K8sHealthCollector({
+      enabled: runtimeConfig.enableK8sCollector
+    })
+  );
+  registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,
       maxLines: runtimeConfig.fileCollectorMaxLines,
@@ -56,6 +63,7 @@ export function createMcpServer(): McpServer {
   );
   const paperclipClient = new PaperclipApiClient();
   const caddyClient = new CaddyClient();
+  const k8sClient = new K8sClient();
   const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
@@ -121,6 +129,32 @@ export function createMcpServer(): McpServer {
         };
       }
       const payload = await caddyClient.checkHealth();
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.k8s_health",
+    {
+      title: "Kubernetes health check",
+      description: "Runs kubectl-based namespace diagnostics for problematic pods.",
+      inputSchema: {}
+    },
+    async () => {
+      if (!runtimeConfig.enableK8sCollector && !runtimeConfig.hasK8sNamespace) {
+        const payload = {
+          configured: false,
+          error: "Kubernetes is not configured. Set K8S_COLLECTOR_ENABLED=true and K8S_NAMESPACE."
+        };
+        return {
+          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+        };
+      }
+      const payload = await k8sClient.checkHealth();
       return {
         structuredContent: payload,
         content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]

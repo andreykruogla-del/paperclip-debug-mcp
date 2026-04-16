@@ -4,6 +4,7 @@ import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
 import { CaddyClient } from "../src/integrations/caddy-client.js";
+import { K8sClient } from "../src/integrations/k8s-client.js";
 import { SentryClient } from "../src/integrations/sentry-client.js";
 import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
@@ -13,6 +14,7 @@ async function main(): Promise<void> {
     at: new Date().toISOString()
   };
   const caddyClient = new CaddyClient();
+  const k8sClient = new K8sClient();
   const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
 
@@ -123,6 +125,28 @@ async function main(): Promise<void> {
     report.wordpress = {
       status: "skipped",
       reason: "WORDPRESS_BASE_URL is not set"
+    };
+  }
+
+  if ((process.env.K8S_COLLECTOR_ENABLED ?? "false").toLowerCase() !== "false") {
+    try {
+      const health = await k8sClient.checkHealth();
+      report.k8s = {
+        status: health.reachable ? "ok" : "error",
+        namespace: health.namespace,
+        podCount: health.podCount,
+        problematicPodCount: health.problematicPodCount
+      };
+    } catch (error: unknown) {
+      report.k8s = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.k8s = {
+      status: "skipped",
+      reason: "K8S_COLLECTOR_ENABLED is false"
     };
   }
 

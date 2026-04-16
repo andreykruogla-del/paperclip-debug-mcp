@@ -112,9 +112,10 @@ SENTRY_ORG_SLUG=
 SENTRY_PROJECT_SLUG=
 SENTRY_AUTH_TOKEN=
 
+K8S_COLLECTOR_ENABLED=false
+K8S_NAMESPACE=default
+
 # Future optional adapters (template)
-# K8S_COLLECTOR_ENABLED=false
-# K8S_NAMESPACE=
 # POSTGRES_COLLECTOR_ENABLED=false
 # POSTGRES_URL=
 # REDIS_COLLECTOR_ENABLED=false
@@ -151,6 +152,7 @@ When adding any new optional adapter, update both:
 - `paperclipDebug.wordpress_health`
 - `paperclipDebug.caddy_health`
 - `paperclipDebug.sentry_health`
+- `paperclipDebug.k8s_health`
 
 ## Transport Modes
 
@@ -183,6 +185,7 @@ Current scope:
 - Optional WordPress health collector (REST availability, XML-RPC, auth check)
 - Optional Caddy health collector (health endpoint and proxy log diagnostics)
 - Optional Sentry health collector (unresolved/high-severity issue diagnostics)
+- Optional Kubernetes health collector (namespace/pod diagnostics via kubectl)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export
