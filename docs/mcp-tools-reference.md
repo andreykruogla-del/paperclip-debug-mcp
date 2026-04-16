@@ -1,4 +1,4 @@
-﻿# MCP Tools Reference
+# MCP Tools Reference
 
 This document describes the MCP tools currently exposed by `src/mcp/server.ts`.
 
