@@ -67,6 +67,7 @@ Optional packet export:
 npm run incident:packet -- --issue-id <issue-id>
 # or
 npm run incident:packet -- --run-id <run-id>
+npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchmark.md
 ```
 
 ## Configuration

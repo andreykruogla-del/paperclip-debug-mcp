@@ -48,6 +48,12 @@ npm run incident:packet -- --run-id <run-id> --out-dir ./artifacts
 
 Use exported JSON packet for incident archive or team handoff.
 
+To summarize packet quality/volume over time:
+
+```bash
+npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchmark.md
+```
+
 ## 6) HTTP transport smoke
 
 ```bash
