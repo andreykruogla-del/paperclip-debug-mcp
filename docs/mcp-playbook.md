@@ -1,128 +1,232 @@
 # MCP Playbook
 
-This playbook gives ready-to-run diagnostic sequences for coding agents.
+This playbook provides practical, scenario-based tool sequences for incident triage.
 
-## 1) Fast triage (3 calls)
+## 1) Preflight on a new environment
 
+When to use:
+- First run in a new environment or after major `.env` changes.
+
+Suggested tool call order:
+1. `paperclipDebug.get_runtime_config`
+2. `paperclipDebug.list_collectors`
+3. `paperclipDebug.refresh_collectors`
+
+Look for:
+- Expected collectors enabled.
+- Missing configuration signals (`configured: false`, explicit errors).
+- Non-zero incident collection where expected.
+
+Next step:
+- If configuration errors appear, fix `.env` first.
+- If preflight is healthy, continue with fast triage.
+
+## 2) Fast triage
+
+When to use:
+- You need immediate operational focus across the whole system.
+
+Suggested tool call order:
 1. `paperclipDebug.system_snapshot`
 2. `paperclipDebug.prioritize_incidents` with `minBand=high`
 3. `paperclipDebug.list_services` with `includeHealthy=false`
 4. `paperclipDebug.incident_trends` with `windowHours=24`, `bucketMinutes=60`
 
-Use this when you need immediate operational focus.
+Look for:
+- High/critical incident concentration.
+- Problematic services overlapping with top incidents.
+- Rising trend buckets that indicate active degradation.
 
-Before triage on new installs:
+Next step:
+- If service signals dominate, use Service outage path.
+- If one run/issue dominates, pivot to run-centered or issue-centered investigation.
 
-1. `paperclipDebug.get_runtime_config`
-2. `paperclipDebug.list_collectors`
-3. `paperclipDebug.refresh_collectors`
+## 3) Failed run investigation
 
-## 2) Failed run investigation
+When to use:
+- A specific run appears failed or handoff ownership is unclear.
 
-1. `paperclipDebug.list_runs` (find failed run)
-2. `paperclipDebug.get_run_events` (target run id)
-3. `paperclipDebug.trace_handoff` (same run id)
+Suggested tool call order:
+1. `paperclipDebug.list_runs` (find target run)
+2. `paperclipDebug.get_run_events` (selected `runId`)
+3. `paperclipDebug.trace_handoff` (same `runId`)
 
-Use this when agent handoff chain is unclear.
+Look for:
+- Error bursts and sequence breakpoints in run events.
+- Handoff gaps or repeated role transitions.
 
-## 3) Issue-centered investigation
+Next step:
+- If run maps to an issue, build an incident packet for handoff.
+- If signals point to infra dependency, run the relevant adapter path.
 
+## 4) Issue-centered investigation
+
+When to use:
+- Investigation starts from a known Paperclip issue ID.
+
+Suggested tool call order:
 1. `paperclipDebug.list_issues`
-2. `paperclipDebug.get_issue_comments`
+2. `paperclipDebug.get_issue_comments` (selected `issueId`)
 3. `paperclipDebug.build_incident_packet` with `issueId`
 
-Use this for structured handoff between CTO/Coder/QA/Observer.
+Look for:
+- Timeline context from comments.
+- Related run linkage and correlated incidents/clusters in the packet summary.
 
-## 4) Service outage path
+Next step:
+- Use packet output for team handoff or archive.
+- If linked run/service is clear, jump to run/service deep dive.
 
-1. `paperclipDebug.list_services` (problematic containers)
+## 5) Service outage path
+
+When to use:
+- Root cause is likely in container/service infrastructure.
+
+Suggested tool call order:
+1. `paperclipDebug.list_services` (problematic first)
 2. `paperclipDebug.get_service_logs` (target service)
-3. `paperclipDebug.prioritize_incidents` (to correlate with top failures)
+3. `paperclipDebug.prioritize_incidents`
 
-Use this when root cause likely comes from infrastructure/service layer.
+Look for:
+- Service-level error signatures matching high-priority incidents.
+- Time overlap between log failures and incident spikes.
 
-## 4b) WordPress dependency path
+Next step:
+- If dependency-specific symptoms appear, run the matching adapter scenario.
+- If service state normalizes, return to incident clustering/trend analysis.
 
+## 6) Dependency adapter paths
+
+### 6a) WordPress path
+
+When to use:
+- Ingestion/update flow depends on WordPress endpoints.
+
+Suggested tool call order:
 1. `paperclipDebug.wordpress_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when ingestion/update flow depends on WordPress API availability.
+Look for:
+- WordPress health failures and correlated medium/high incidents.
 
-## 4c) Caddy reverse-proxy path
+Next step:
+- If unhealthy, treat WordPress dependency as active root-cause candidate.
 
+### 6b) Caddy path
+
+When to use:
+- Ingress, HTTPS, or reverse-proxy behavior looks suspicious.
+
+Suggested tool call order:
 1. `paperclipDebug.caddy_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when ingress/HTTPS/proxy behavior is suspicious.
+Look for:
+- Endpoint/log errors aligned with incident timelines.
 
-## 4d) Sentry production-error path
+Next step:
+- If unhealthy, prioritize proxy/ingress remediation before deeper app-level analysis.
 
+### 6c) Sentry path
+
+When to use:
+- You need production exception context during triage.
+
+Suggested tool call order:
 1. `paperclipDebug.sentry_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when you need fast visibility into unresolved production exceptions.
+Look for:
+- Unresolved/high-severity exception pressure matching active incidents.
 
-## 4e) Kubernetes namespace path
+Next step:
+- If exception pressure is high, prioritize fixes for top recurring exception classes.
 
+### 6d) Kubernetes path
+
+When to use:
+- Runtime components are in Kubernetes and pod/namespace health is suspect.
+
+Suggested tool call order:
 1. `paperclipDebug.k8s_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when agent runtimes are in k8s and pod health is suspect.
+Look for:
+- Pod instability signals correlated with current failures.
 
-## 4f) PostgreSQL dependency path
+Next step:
+- If namespace health is degraded, prioritize cluster/pod remediation path.
 
+### 6e) PostgreSQL path
+
+When to use:
+- DB contention, query latency, or replication lag may impact flows.
+
+Suggested tool call order:
 1. `paperclipDebug.postgres_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when DB load/locks/replication may be impacting agent flows.
+Look for:
+- Lock/long-query/replication signals tied to incident spikes.
 
-## 4g) Redis dependency path
+Next step:
+- If DB health is degraded, prioritize DB-level mitigation before app-only changes.
 
+### 6f) Redis path
+
+When to use:
+- Cache/queue symptoms suggest memory pressure or rejected connections.
+
+Suggested tool call order:
 1. `paperclipDebug.redis_health`
 2. `paperclipDebug.refresh_collectors`
-3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+3. `paperclipDebug.prioritize_incidents` with `minBand=medium`
 
-Use this when queue/cache symptoms suggest memory pressure or connection saturation.
+Look for:
+- Latency/eviction/rejection patterns aligned with active incidents.
 
-## 5) Evidence export
+Next step:
+- If Redis health is degraded, prioritize cache/queue stabilization actions.
 
+## 7) Evidence export and benchmarking
+
+When to use:
+- You need a file-based packet for handoff, audit, or reporting.
+
+Suggested command order:
 ```bash
 npm run incident:packet -- --issue-id <issue-id> --out-dir ./artifacts
-```
-
-or
-
-```bash
+# or
 npm run incident:packet -- --run-id <run-id> --out-dir ./artifacts
-```
-
-Use exported JSON packet for incident archive or team handoff.
-
-To summarize packet quality/volume over time:
-
-```bash
 npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchmark.md
 ```
 
-## 6) HTTP transport smoke
+Look for:
+- A generated packet JSON and optional benchmark markdown summary.
 
+Next step:
+- Share packet/benchmark artifacts with incident stakeholders.
+
+## 8) HTTP transport smoke
+
+When to use:
+- You need to validate HTTP transport availability.
+
+Suggested command order:
 ```bash
 MCP_HTTP_PORT=8799 npm run mcp:http
-```
-
-Then check:
-
-```bash
 curl http://localhost:8799/healthz
-```
-
-If auth token is enabled, send:
-
-```bash
+# if auth token is enabled
 curl -H "Authorization: Bearer <token>" http://localhost:8799/healthz
 ```
+
+Look for:
+- Healthy HTTP response from `/healthz`.
+
+Next step:
+- If health checks fail, verify `MCP_HTTP_PORT`, auth token setup, and runtime configuration.
