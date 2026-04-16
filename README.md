@@ -100,9 +100,25 @@ WORDPRESS_COLLECTOR_ENABLED=false
 WORDPRESS_BASE_URL=              # e.g. https://site.example.com
 WORDPRESS_USERNAME=              # optional for auth check
 WORDPRESS_APP_PASSWORD=          # optional for auth check
+
+# Future optional adapters (template)
+# K8S_COLLECTOR_ENABLED=false
+# K8S_NAMESPACE=
+# POSTGRES_COLLECTOR_ENABLED=false
+# POSTGRES_URL=
+# REDIS_COLLECTOR_ENABLED=false
+# REDIS_URL=
+# CADDY_COLLECTOR_ENABLED=false
+# CADDY_LOG_PATH=
+# SENTRY_COLLECTOR_ENABLED=false
+# SENTRY_DSN=
 ```
 
 Start from [`.env.example`](.env.example).
+
+When adding any new optional adapter, update both:
+- this `Optional adapter configuration` block
+- [`.env.example`](.env.example)
 
 ## Core MCP Tools
 

@@ -54,3 +54,16 @@ registry.register(new WordpressCollector());
 ```
 
 After registration, all core tools (`list_incidents`, clusters, prioritization, packets) work automatically.
+
+## Required docs update for every new optional adapter
+
+When you add a new optional adapter, update these files in the same PR:
+
+- `README.md`
+  - `Optional adapter configuration`
+  - `Optional Adapter Tools` (if new MCP tools were added)
+  - `Optional Ecosystem Adapters`
+- `.env.example`
+  - add env variables under `# Optional adapters configuration`
+- `docs/runtime-profiles.md`
+  - add at least one profile snippet for the new adapter
