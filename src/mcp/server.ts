@@ -6,11 +6,15 @@ import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js"
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
+import { PaperclipApiClient } from "../integrations/paperclip-client.js";
+import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
+import { listDockerServices } from "../integrations/docker-services.js";
 
 export function createMcpServer(): McpServer {
   const registry = new CollectorRegistry();
   registry.register(new PaperclipApiCollector());
   registry.register(new DockerCliCollector());
+  const paperclipClient = new PaperclipApiClient();
 
   const server = new McpServer(
     {
@@ -123,6 +127,129 @@ export function createMcpServer(): McpServer {
                 totalIncidents: incidents.length,
                 totalTraces: filtered.length,
                 traces: cut
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.list_runs",
+    {
+      title: "List runs",
+      description: "Returns recent run summaries from Paperclip API.",
+      inputSchema: {
+        limit: z.number().int().positive().max(200).optional()
+      }
+    },
+    async ({ limit }) => {
+      if (!paperclipClient.isEnabled()) {
+        return {
+          structuredContent: {
+            error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+          },
+          content: [
+            {
+              type: "text",
+              text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+            }
+          ]
+        };
+      }
+
+      const { runs, sourcePath } = await listRuns(paperclipClient, limit ?? 20);
+      return {
+        structuredContent: {
+          sourcePath,
+          totalRuns: runs.length,
+          runs
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ sourcePath, totalRuns: runs.length, runs }, null, 2)
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.get_run_events",
+    {
+      title: "Get run events",
+      description: "Returns normalized events for a specific run id.",
+      inputSchema: {
+        runId: z.string().min(1),
+        limit: z.number().int().positive().max(5000).optional()
+      }
+    },
+    async ({ runId, limit }) => {
+      if (!paperclipClient.isEnabled()) {
+        return {
+          structuredContent: {
+            error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+          },
+          content: [
+            {
+              type: "text",
+              text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+            }
+          ]
+        };
+      }
+
+      const { events, sourcePath } = await getRunEvents(paperclipClient, runId);
+      const cut = events.slice(0, limit ?? 1000);
+      return {
+        structuredContent: {
+          sourcePath,
+          runId,
+          totalEvents: events.length,
+          events: cut
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ sourcePath, runId, totalEvents: events.length, events: cut }, null, 2)
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.list_services",
+    {
+      title: "List docker services",
+      description: "Returns live Docker service/container snapshot with problematic markers.",
+      inputSchema: {
+        includeHealthy: z.boolean().optional()
+      }
+    },
+    async ({ includeHealthy }) => {
+      const services = await listDockerServices();
+      const filtered = includeHealthy ? services : services.filter((service) => service.problematic);
+      return {
+        structuredContent: {
+          totalServices: services.length,
+          returnedServices: filtered.length,
+          problematicServices: services.filter((service) => service.problematic).length,
+          services: filtered
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                totalServices: services.length,
+                returnedServices: filtered.length,
+                problematicServices: services.filter((service) => service.problematic).length,
+                services: filtered
               },
               null,
               2

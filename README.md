@@ -23,6 +23,7 @@ Goal: reduce `time-to-root-cause` and `tokens-per-incident`.
 ```bash
 npm install
 npm run mcp:stdio
+npm run smoke:live
 ```
 
 Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:
@@ -30,6 +31,9 @@ Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
 - `paperclipDebug.trace_handoff`
+- `paperclipDebug.list_runs`
+- `paperclipDebug.get_run_events`
+- `paperclipDebug.list_services`
 
 ## Live collector config
 
@@ -45,9 +49,15 @@ PAPERCLIP_MAX_ISSUES=25          # optional
 DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
 ```
 
+You can start from [`.env.example`](.env.example).
+
 Collector behavior:
 - `paperclip-api`: reads issues/comments from Paperclip API (by explicit issue IDs or company/project scope)
 - `docker-cli`: reads real container states from `docker ps -a` and pulls error excerpts from `docker logs`
+
+Run/event behavior:
+- `list_runs`: tries Paperclip endpoints (`/api/runs`, `/api/run-logs`) and returns normalized run summaries
+- `get_run_events`: fetches events for a run id (`/api/runs/:id/events` with fallbacks)
 
 ## Current scope (v0)
 
@@ -55,6 +65,7 @@ Collector behavior:
 - pluggable collector/adaptor model
 - real `paperclip-api` collector
 - real `docker-cli` collector
+- run/event forensic tools from Paperclip API
 - normalized incident schema
 - incident dedup clustering by fingerprint
 

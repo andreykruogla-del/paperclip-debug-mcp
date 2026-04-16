@@ -1,5 +1,11 @@
 import type { IncidentCollector } from "../core/collector-interface.js";
 import type { Incident, IncidentSeverity } from "../core/types.js";
+import {
+  PaperclipApiClient,
+  firstString,
+  parseCsv,
+  toTimestamp
+} from "../integrations/paperclip-client.js";
 
 type PaperclipIssue = {
   id?: string;
@@ -32,24 +38,6 @@ type PaperclipCollectorOptions = {
   maxIssues?: number;
 };
 
-function parseCsv(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
-}
-
-function firstString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function toTimestamp(value: string | undefined): number {
-  if (!value) return Date.now();
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : Date.now();
-}
-
 function statusToSeverity(status: string | undefined): IncidentSeverity {
   const normalized = status?.toLowerCase() ?? "";
   if (normalized.includes("blocked") || normalized.includes("failed")) return "critical";
@@ -79,6 +67,7 @@ export class PaperclipApiCollector implements IncidentCollector {
   private readonly projectId?: string;
   private readonly issueIds: string[];
   private readonly maxIssues: number;
+  private readonly client: PaperclipApiClient;
 
   public constructor(options?: PaperclipCollectorOptions) {
     const envIssueIds = parseCsv(process.env.PAPERCLIP_ISSUE_IDS);
@@ -93,7 +82,8 @@ export class PaperclipApiCollector implements IncidentCollector {
       options?.maxIssues ??
       (Number.isFinite(envMaxIssues) && envMaxIssues > 0 ? Math.min(envMaxIssues, 200) : 25);
 
-    this.enabled = this.baseUrl.length > 0 && this.token.length > 0;
+    this.client = new PaperclipApiClient({ baseUrl: this.baseUrl, token: this.token });
+    this.enabled = this.client.isEnabled();
   }
 
   public async collectIncidents(): Promise<Incident[]> {
@@ -142,14 +132,14 @@ export class PaperclipApiCollector implements IncidentCollector {
     params.set("limit", String(this.maxIssues));
     if (this.projectId) params.set("projectId", this.projectId);
     const query = params.toString();
-    const payload = await this.fetchJson(
+    const payload = await this.client.get(
       `/api/companies/${this.companyId}/issues${query ? `?${query}` : ""}`
     );
-    return this.extractArray<PaperclipIssue>(payload);
+    return this.client.extractArray<PaperclipIssue>(payload, ["issues", "items", "data", "results"]);
   }
 
   private async fetchIssue(issueId: string): Promise<PaperclipIssue | null> {
-    const payload = await this.fetchJson(`/api/issues/${issueId}`);
+    const payload = await this.client.get(`/api/issues/${issueId}`);
     if (payload && typeof payload === "object") {
       return payload as PaperclipIssue;
     }
@@ -157,40 +147,7 @@ export class PaperclipApiCollector implements IncidentCollector {
   }
 
   private async fetchIssueComments(issueId: string): Promise<PaperclipComment[]> {
-    const payload = await this.fetchJson(`/api/issues/${issueId}/comments`);
-    return this.extractArray<PaperclipComment>(payload);
-  }
-
-  private async fetchJson(path: string): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Paperclip API ${response.status} for ${path}: ${body.slice(0, 240)}`);
-    }
-
-    return response.json();
-  }
-
-  private extractArray<T>(payload: unknown): T[] {
-    if (Array.isArray(payload)) return payload as T[];
-    if (payload && typeof payload === "object") {
-      const record = payload as Record<string, unknown>;
-      const candidateKeys = ["items", "data", "results", "issues", "comments"];
-      for (const key of candidateKeys) {
-        const value = record[key];
-        if (Array.isArray(value)) return value as T[];
-      }
-      for (const value of Object.values(record)) {
-        if (Array.isArray(value)) return value as T[];
-      }
-    }
-    return [];
+    const payload = await this.client.get(`/api/issues/${issueId}/comments`);
+    return this.client.extractArray<PaperclipComment>(payload, ["comments", "items", "data", "results"]);
   }
 }

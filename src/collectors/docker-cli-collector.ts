@@ -3,14 +3,9 @@ import { promisify } from "node:util";
 
 import type { IncidentCollector } from "../core/collector-interface.js";
 import type { Incident, IncidentSeverity } from "../core/types.js";
+import { listDockerServices } from "../integrations/docker-services.js";
 
 const execFileAsync = promisify(execFile);
-
-type DockerPsRow = {
-  ID?: string;
-  Names?: string;
-  Status?: string;
-};
 
 function now(): number {
   return Date.now();
@@ -33,11 +28,6 @@ function probableCauseFromLog(logExcerpt: string): string | undefined {
   return undefined;
 }
 
-function isProblemStatus(status: string): boolean {
-  const value = status.toLowerCase();
-  return value.includes("exited") || value.includes("dead") || value.includes("unhealthy") || value.includes("restarting");
-}
-
 async function runDocker(args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("docker", args, { timeout: 8000, windowsHide: true, maxBuffer: 1024 * 1024 });
   return stdout ?? "";
@@ -58,34 +48,18 @@ export class DockerCliCollector implements IncidentCollector {
   public async collectIncidents(): Promise<Incident[]> {
     if (!this.enabled) return [];
 
-    const rows = await this.listContainers();
-    const problematic = rows.filter((row) => isProblemStatus(row.Status ?? ""));
-
-    const incidents = await Promise.all(problematic.map(async (row) => this.toIncident(row)));
+    const services = await listDockerServices();
+    const problematic = services.filter((service) => service.problematic);
+    const incidents = await Promise.all(
+      problematic.map(async (service) =>
+        this.toIncident(service.id, service.name, service.status)
+      )
+    );
     return incidents.filter((incident): incident is Incident => Boolean(incident));
   }
 
-  private async listContainers(): Promise<DockerPsRow[]> {
-    const output = await runDocker(["ps", "-a", "--format", "{{json .}}"]);
-    return output
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line) => {
-        try {
-          return JSON.parse(line) as DockerPsRow;
-        } catch {
-          return {};
-        }
-      });
-  }
-
-  private async toIncident(row: DockerPsRow): Promise<Incident | null> {
-    const containerId = row.ID?.trim();
-    const name = row.Names?.trim() || containerId;
-    const status = row.Status?.trim() ?? "unknown";
+  private async toIncident(containerId: string, name: string, status: string): Promise<Incident | null> {
     if (!containerId || !name) return null;
-
     const logExcerpt = await this.fetchLogs(containerId);
     return {
       id: `docker-${containerId}`,
