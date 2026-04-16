@@ -243,6 +243,110 @@ function buildSystemSnapshotTriageGuidance(params: {
   };
 }
 
+function buildIncidentPacketGuidance(params: {
+  packet: {
+    issue?: { issueId?: string; relatedRunId?: string };
+    comments?: unknown[];
+    run?: { runId?: string };
+    runEvents?: unknown[];
+    relatedIncidents: unknown[];
+    clusters: unknown[];
+  };
+}): {
+  topSignals: TriageSignal[];
+  recommendedNextTools: string[];
+  packetReadiness: {
+    state: "minimal" | "partial" | "ready";
+    checks: {
+      hasIssueContext: boolean;
+      hasRunContext: boolean;
+      hasComments: boolean;
+      hasRunEvents: boolean;
+      hasRelatedIncidents: boolean;
+      hasClusters: boolean;
+    };
+  };
+} {
+  const hasIssueContext = Boolean(params.packet.issue?.issueId);
+  const hasRunContext = Boolean(params.packet.run?.runId || params.packet.issue?.relatedRunId);
+  const hasComments = (params.packet.comments?.length ?? 0) > 0;
+  const hasRunEvents = (params.packet.runEvents?.length ?? 0) > 0;
+  const hasRelatedIncidents = params.packet.relatedIncidents.length > 0;
+  const hasClusters = params.packet.clusters.length > 0;
+
+  const evidenceHits = [hasComments, hasRunEvents, hasRelatedIncidents, hasClusters].filter(Boolean).length;
+  const packetReadinessState: "minimal" | "partial" | "ready" =
+    evidenceHits >= 3 ? "ready" : evidenceHits >= 1 ? "partial" : "minimal";
+
+  const topSignals: TriageSignal[] = [];
+  if (!hasIssueContext && !hasRunContext) {
+    topSignals.push({
+      signal: "missing_primary_context",
+      reason: "Packet was built without a strong issue/run anchor."
+    });
+  }
+  if (!hasComments && hasIssueContext) {
+    topSignals.push({
+      signal: "no_issue_comments",
+      reason: "Issue context exists, but no comments were included."
+    });
+  }
+  if (!hasRunEvents && hasRunContext) {
+    topSignals.push({
+      signal: "no_run_events",
+      reason: "Run context exists, but no run events were included."
+    });
+  }
+  if (!hasRelatedIncidents) {
+    topSignals.push({
+      signal: "no_related_incidents",
+      reason: "No incidents were correlated to this packet context."
+    });
+  }
+  if (hasRelatedIncidents) {
+    topSignals.push({
+      signal: "correlated_incidents_present",
+      reason: "Packet includes incident evidence linked to the selected context.",
+      value: params.packet.relatedIncidents.length
+    });
+  }
+  if (hasClusters) {
+    topSignals.push({
+      signal: "incident_clusters_present",
+      reason: "Packet includes clustered incident patterns for triage.",
+      value: params.packet.clusters.length
+    });
+  }
+
+  const recommendedNextTools = uniqueTools([
+    ...(hasIssueContext && !hasComments ? ["paperclipDebug.get_issue_comments"] : []),
+    ...(hasRunContext && !hasRunEvents ? ["paperclipDebug.get_run_events"] : []),
+    ...(!hasIssueContext && !hasRunContext
+      ? ["paperclipDebug.list_issues", "paperclipDebug.list_runs"]
+      : []),
+    ...(hasRelatedIncidents
+      ? ["paperclipDebug.prioritize_incidents", "paperclipDebug.list_incident_clusters"]
+      : ["paperclipDebug.refresh_collectors", "paperclipDebug.list_services"]),
+    ...(hasRunContext ? ["paperclipDebug.trace_handoff"] : [])
+  ]).slice(0, 7);
+
+  return {
+    topSignals: topSignals.slice(0, 6),
+    recommendedNextTools,
+    packetReadiness: {
+      state: packetReadinessState,
+      checks: {
+        hasIssueContext,
+        hasRunContext,
+        hasComments,
+        hasRunEvents,
+        hasRelatedIncidents,
+        hasClusters
+      }
+    }
+  };
+}
+
 export function createMcpServer(): McpServer {
   const runtimeConfig = readRuntimeConfig();
   const registry = new CollectorRegistry();
@@ -954,6 +1058,7 @@ export function createMcpServer(): McpServer {
         runEvents,
         allIncidents
       });
+      const packetGuidance = buildIncidentPacketGuidance({ packet });
 
       return {
         structuredContent: {
@@ -965,7 +1070,10 @@ export function createMcpServer(): McpServer {
             runEvents: packet.runEvents?.length ?? 0,
             relatedIncidents: packet.relatedIncidents.length,
             clusters: packet.clusters.length
-          }
+          },
+          topSignals: packetGuidance.topSignals,
+          recommendedNextTools: packetGuidance.recommendedNextTools,
+          packetReadiness: packetGuidance.packetReadiness
         },
         content: [
           {
@@ -980,7 +1088,10 @@ export function createMcpServer(): McpServer {
                   runEvents: packet.runEvents?.length ?? 0,
                   relatedIncidents: packet.relatedIncidents.length,
                   clusters: packet.clusters.length
-                }
+                },
+                topSignals: packetGuidance.topSignals,
+                recommendedNextTools: packetGuidance.recommendedNextTools,
+                packetReadiness: packetGuidance.packetReadiness
               },
               null,
               2
