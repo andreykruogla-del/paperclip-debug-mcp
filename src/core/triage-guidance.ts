@@ -45,6 +45,24 @@ type HandoffTraceLike = {
   steps: HandoffStepLike[];
 };
 
+type IssueLike = {
+  issueId: string;
+  status: string;
+  priority?: string;
+  assigneeAgentId?: string;
+  assigneeAgentName?: string;
+  relatedRunId?: string;
+  updatedAt: number;
+};
+
+type IssueCommentLike = {
+  commentId: string;
+  issueId: string;
+  body?: string;
+  createdAt: number;
+  authorId?: string;
+};
+
 export type TriageSignal = {
   signal: string;
   reason: string;
@@ -84,6 +102,15 @@ function eventTypeBreakdown(events: RunEventLike[]): Array<[string, number]> {
   const counts = new Map<string, number>();
   for (const event of events) {
     const key = event.type || "unknown";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function issueStatusBreakdown(issues: IssueLike[]): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const issue of issues) {
+    const key = issue.status || "unknown";
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -534,6 +561,170 @@ export function buildTraceHandoffTriageGuidance(params: {
       totalSteps,
       tracesWithCritical,
       maxStepsInTrace
+    },
+    topSignals: topSignals.slice(0, 5),
+    recommendedNextTools
+  };
+}
+
+export function buildListIssuesTriageGuidance(params: {
+  issues: IssueLike[];
+  requestedStatus?: string;
+}): {
+  summary: {
+    requestedStatus: string | null;
+    returnedIssues: number;
+    runLinkedIssues: number;
+    assignedIssues: number;
+    issuesWithPriorityTag: number;
+    newestUpdatedAt: number | null;
+    oldestUpdatedAt: number | null;
+  };
+  topSignals: TriageSignal[];
+  recommendedNextTools: string[];
+} {
+  const runLinkedIssues = params.issues.filter((issue) => Boolean(issue.relatedRunId)).length;
+  const assignedIssues = params.issues.filter(
+    (issue) => Boolean(issue.assigneeAgentId) || Boolean(issue.assigneeAgentName)
+  ).length;
+  const issuesWithPriorityTag = params.issues.filter((issue) => Boolean(issue.priority)).length;
+  const statusCounts = issueStatusBreakdown(params.issues);
+  const timestamps = params.issues.map((issue) => issue.updatedAt).sort((a, b) => a - b);
+
+  const topSignals: TriageSignal[] = [];
+  if (params.issues.length === 0) {
+    topSignals.push({
+      signal: "no_issues_after_filter",
+      reason: "No issues were returned for the requested issue filter."
+    });
+  }
+  if (runLinkedIssues > 0) {
+    topSignals.push({
+      signal: "run_linked_issues_present",
+      reason: "Some returned issues are linked to runs and support run-level drilldown.",
+      value: runLinkedIssues
+    });
+  }
+  if (params.issues.length > assignedIssues) {
+    topSignals.push({
+      signal: "unassigned_issues_present",
+      reason: "Some returned issues do not have an assignee.",
+      value: params.issues.length - assignedIssues
+    });
+  }
+  if (statusCounts.length > 0) {
+    topSignals.push({
+      signal: "dominant_issue_status",
+      reason: "Most frequent issue status in the returned set.",
+      value: `${statusCounts[0][0]} (${statusCounts[0][1]})`
+    });
+  }
+
+  const recommendedNextTools = uniqueTools(
+    params.issues.length === 0
+      ? [
+          "paperclipDebug.system_snapshot",
+          "paperclipDebug.list_runs",
+          "paperclipDebug.refresh_collectors"
+        ]
+      : [
+          "paperclipDebug.get_issue_comments",
+          "paperclipDebug.build_incident_packet",
+          "paperclipDebug.prioritize_incidents",
+          "paperclipDebug.list_incident_clusters",
+          ...(runLinkedIssues > 0 ? ["paperclipDebug.trace_handoff", "paperclipDebug.get_run_events"] : [])
+        ]
+  ).slice(0, 6);
+
+  return {
+    summary: {
+      requestedStatus: params.requestedStatus ?? null,
+      returnedIssues: params.issues.length,
+      runLinkedIssues,
+      assignedIssues,
+      issuesWithPriorityTag,
+      newestUpdatedAt: timestamps.length > 0 ? timestamps[timestamps.length - 1] : null,
+      oldestUpdatedAt: timestamps.length > 0 ? timestamps[0] : null
+    },
+    topSignals: topSignals.slice(0, 5),
+    recommendedNextTools
+  };
+}
+
+export function buildIssueCommentsTriageGuidance(params: {
+  issueId: string;
+  comments: IssueCommentLike[];
+}): {
+  summary: {
+    issueId: string;
+    returnedComments: number;
+    uniqueAuthors: number;
+    commentsWithBody: number;
+    firstCommentAt: number | null;
+    lastCommentAt: number | null;
+  };
+  topSignals: TriageSignal[];
+  recommendedNextTools: string[];
+} {
+  const uniqueAuthors = new Set(
+    params.comments.map((comment) => comment.authorId).filter((author): author is string => Boolean(author))
+  ).size;
+  const commentsWithBody = params.comments.filter((comment) => Boolean(comment.body)).length;
+  const timestamps = params.comments.map((comment) => comment.createdAt).sort((a, b) => a - b);
+
+  const topSignals: TriageSignal[] = [];
+  if (params.comments.length === 0) {
+    topSignals.push({
+      signal: "no_issue_comments_found",
+      reason: "No comments were returned for this issue."
+    });
+  }
+  if (params.comments.length > 0) {
+    topSignals.push({
+      signal: "issue_thread_present",
+      reason: "Issue has discussion history that can support packet handoff.",
+      value: params.comments.length
+    });
+  }
+  if (uniqueAuthors > 1) {
+    topSignals.push({
+      signal: "multi_author_thread",
+      reason: "Comments come from multiple authors and may indicate cross-team handoff.",
+      value: uniqueAuthors
+    });
+  }
+  if (commentsWithBody < params.comments.length) {
+    topSignals.push({
+      signal: "comments_with_missing_body",
+      reason: "Some comments have no body text after normalization/redaction.",
+      value: params.comments.length - commentsWithBody
+    });
+  }
+
+  const recommendedNextTools = uniqueTools(
+    params.comments.length === 0
+      ? [
+          "paperclipDebug.list_issues",
+          "paperclipDebug.build_incident_packet",
+          "paperclipDebug.system_snapshot"
+        ]
+      : [
+          "paperclipDebug.build_incident_packet",
+          "paperclipDebug.prioritize_incidents",
+          "paperclipDebug.list_incident_clusters",
+          "paperclipDebug.trace_handoff",
+          "paperclipDebug.get_run_events"
+        ]
+  ).slice(0, 6);
+
+  return {
+    summary: {
+      issueId: params.issueId,
+      returnedComments: params.comments.length,
+      uniqueAuthors,
+      commentsWithBody,
+      firstCommentAt: timestamps.length > 0 ? timestamps[0] : null,
+      lastCommentAt: timestamps.length > 0 ? timestamps[timestamps.length - 1] : null
     },
     topSignals: topSignals.slice(0, 5),
     recommendedNextTools

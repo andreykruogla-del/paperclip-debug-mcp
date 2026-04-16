@@ -19,6 +19,8 @@ import { prioritizeIncidents } from "../core/incident-priority.js";
 import { readRuntimeConfig } from "../core/runtime-config.js";
 import {
   buildIncidentPacketGuidance,
+  buildIssueCommentsTriageGuidance,
+  buildListIssuesTriageGuidance,
   buildPrioritizeTriageGuidance,
   buildRunEventsTriageGuidance,
   buildSystemSnapshotTriageGuidance,
@@ -559,9 +561,36 @@ export function createMcpServer(): McpServer {
         limit ?? 30,
         status
       );
+      const issueGuidance = buildListIssuesTriageGuidance({
+        issues,
+        requestedStatus: status
+      });
       return {
-        structuredContent: { sourcePath, totalIssues: issues.length, issues },
-        content: [{ type: "text", text: JSON.stringify({ sourcePath, totalIssues: issues.length, issues }, null, 2) }]
+        structuredContent: {
+          sourcePath,
+          totalIssues: issues.length,
+          issues,
+          summary: issueGuidance.summary,
+          topSignals: issueGuidance.topSignals,
+          recommendedNextTools: issueGuidance.recommendedNextTools
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                sourcePath,
+                totalIssues: issues.length,
+                issues,
+                summary: issueGuidance.summary,
+                topSignals: issueGuidance.topSignals,
+                recommendedNextTools: issueGuidance.recommendedNextTools
+              },
+              null,
+              2
+            )
+          }
+        ]
       };
     }
   );
@@ -586,9 +615,38 @@ export function createMcpServer(): McpServer {
 
       const { comments, sourcePath } = await getIssueComments(paperclipClient, issueId);
       const cut = comments.slice(0, limit ?? 300);
+      const commentGuidance = buildIssueCommentsTriageGuidance({
+        issueId,
+        comments: cut
+      });
       return {
-        structuredContent: { issueId, sourcePath, totalComments: comments.length, comments: cut },
-        content: [{ type: "text", text: JSON.stringify({ issueId, sourcePath, totalComments: comments.length, comments: cut }, null, 2) }]
+        structuredContent: {
+          issueId,
+          sourcePath,
+          totalComments: comments.length,
+          comments: cut,
+          summary: commentGuidance.summary,
+          topSignals: commentGuidance.topSignals,
+          recommendedNextTools: commentGuidance.recommendedNextTools
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                issueId,
+                sourcePath,
+                totalComments: comments.length,
+                comments: cut,
+                summary: commentGuidance.summary,
+                topSignals: commentGuidance.topSignals,
+                recommendedNextTools: commentGuidance.recommendedNextTools
+              },
+              null,
+              2
+            )
+          }
+        ]
       };
     }
   );

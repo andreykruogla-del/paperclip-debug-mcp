@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildIssueCommentsTriageGuidance,
+  buildListIssuesTriageGuidance,
   buildRunEventsTriageGuidance,
   buildTraceHandoffTriageGuidance
 } from "./triage-guidance.js";
@@ -74,5 +76,80 @@ describe("triage guidance", () => {
     expect(guidance.summary.returnedTraces).toBe(0);
     expect(guidance.topSignals[0]?.signal).toBe("no_handoff_traces");
     expect(guidance.recommendedNextTools).toContain("paperclipDebug.refresh_collectors");
+  });
+
+  it("builds issue list guidance with run-linked signal", () => {
+    const guidance = buildListIssuesTriageGuidance({
+      requestedStatus: "open",
+      issues: [
+        {
+          issueId: "issue-1",
+          status: "open",
+          priority: "high",
+          assigneeAgentId: "agent-1",
+          relatedRunId: "run-1",
+          updatedAt: 1_700_000_000_000
+        },
+        {
+          issueId: "issue-2",
+          status: "open",
+          updatedAt: 1_700_000_000_100
+        }
+      ]
+    });
+
+    expect(guidance.summary.requestedStatus).toBe("open");
+    expect(guidance.summary.returnedIssues).toBe(2);
+    expect(guidance.summary.runLinkedIssues).toBe(1);
+    expect(guidance.topSignals.some((signal) => signal.signal === "run_linked_issues_present")).toBe(true);
+    expect(guidance.recommendedNextTools).toContain("paperclipDebug.get_issue_comments");
+  });
+
+  it("builds fallback issue list guidance when issues are missing", () => {
+    const guidance = buildListIssuesTriageGuidance({
+      issues: []
+    });
+
+    expect(guidance.summary.returnedIssues).toBe(0);
+    expect(guidance.topSignals[0]?.signal).toBe("no_issues_after_filter");
+    expect(guidance.recommendedNextTools).toContain("paperclipDebug.system_snapshot");
+  });
+
+  it("builds issue comment guidance with thread signals", () => {
+    const guidance = buildIssueCommentsTriageGuidance({
+      issueId: "issue-1",
+      comments: [
+        {
+          commentId: "c-1",
+          issueId: "issue-1",
+          body: "first",
+          createdAt: 1_700_000_000_000,
+          authorId: "author-a"
+        },
+        {
+          commentId: "c-2",
+          issueId: "issue-1",
+          createdAt: 1_700_000_000_100,
+          authorId: "author-b"
+        }
+      ]
+    });
+
+    expect(guidance.summary.issueId).toBe("issue-1");
+    expect(guidance.summary.returnedComments).toBe(2);
+    expect(guidance.summary.uniqueAuthors).toBe(2);
+    expect(guidance.topSignals.some((signal) => signal.signal === "multi_author_thread")).toBe(true);
+    expect(guidance.recommendedNextTools).toContain("paperclipDebug.build_incident_packet");
+  });
+
+  it("builds fallback issue comment guidance when comments are missing", () => {
+    const guidance = buildIssueCommentsTriageGuidance({
+      issueId: "issue-empty",
+      comments: []
+    });
+
+    expect(guidance.summary.returnedComments).toBe(0);
+    expect(guidance.topSignals[0]?.signal).toBe("no_issue_comments_found");
+    expect(guidance.recommendedNextTools).toContain("paperclipDebug.list_issues");
   });
 });
