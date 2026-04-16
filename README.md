@@ -63,6 +63,7 @@ npm run incident:packet -- --run-id <run-id>
 ```
 
 Configuration is environment-driven via `.env` (see `.env.example`). Key settings include `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, collector enable flags, and HTTP transport options.
+For authenticated deployments, use the Paperclip quick-check subsection in `docs/getting-started.md` before relying on run/issue tools.
 
 ## Documentation
 

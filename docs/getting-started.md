@@ -34,6 +34,33 @@ Minimal first-run focus:
 - Keep default collector flags unless you know you need changes.
 - Set Paperclip credentials and identifiers if you plan to use Paperclip-backed tools.
 
+### Authenticated Paperclip deployment quick check
+
+Use this short flow before expecting run/issue investigation tools to work:
+
+1. Set required values in `.env`:
+- `PAPERCLIP_BASE_URL`
+- `PAPERCLIP_TOKEN`
+- `PAPERCLIP_COMPANY_ID` (required for issue listing paths)
+- `PAPERCLIP_PROJECT_ID` (optional, but recommended when project-scoped routes are used)
+
+2. Run:
+```bash
+npm run doctor
+npm run smoke:live
+```
+
+3. Interpret Paperclip results:
+- `auth_failure`: token is present but rejected; verify token validity/permissions.
+- `endpoint_mismatch`: base URL is reachable but current API routes are not compatible; verify deployment route shape.
+- `connectivity_failure`: network or host reachability issue.
+
+4. Only then proceed to Paperclip-backed tools:
+- `paperclipDebug.list_runs`
+- `paperclipDebug.get_run_events`
+- `paperclipDebug.list_issues`
+- `paperclipDebug.get_issue_comments`
+
 ## Environment Check
 
 Run the built-in diagnostics:

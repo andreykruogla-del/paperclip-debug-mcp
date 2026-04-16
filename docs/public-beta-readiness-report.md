@@ -2,8 +2,8 @@
 
 ## Current assessment
 
-Current release-candidate status remains **not yet ready for public beta in authenticated Paperclip deployments**.
-The previously open blocker (configured live-server validation) was completed, and the result surfaced concrete integration risks (auth + endpoint compatibility) that keep the beta decision at no-go.
+Current release-candidate status is **improved but still pending one fresh authenticated re-validation pass**.
+The highest-value Paperclip blockers were addressed in onboarding, preflight/smoke signaling, and structured tool error shaping. A final go/no-go now depends on re-running live authenticated validation against target deployment(s).
 
 Evidence used in this pass:
 
@@ -29,8 +29,8 @@ Evidence used in this pass:
 
 2. Local setup and baseline diagnostics
 - Dependency install succeeded.
-- `doctor` produced valid runtime/collector summary output.
-- `smoke:live` completed and clearly marked unavailable integrations as `skipped` with explicit reasons.
+- `doctor` now includes Paperclip preflight compatibility classification.
+- `smoke:live` now reports explicit degraded signals so Paperclip data-plane issues are harder to misread as healthy.
 
 3. Transport baseline
 - `mcp:stdio` starts without immediate runtime failure.
@@ -44,13 +44,14 @@ Evidence used in this pass:
 
 5. Documentation/readiness structure
 - Public-beta checklist exists and now captures skipped-item recording and port-conflict handling.
+- Getting-started guidance now includes a concrete authenticated Paperclip deployment quick-check path.
 - Positioning and readiness documents remain aligned with collector-first MCP direction.
 
 ## What is not yet fully validated
 
-1. Authenticated Paperclip-backed runtime paths with compatible API surface
-- Configured live validation was executed, but Paperclip-dependent calls returned `401 Unauthorized` and `404 API route not found` for key issue/run paths in the tested deployment.
-- This indicates either credential-path/documentation mismatch, API surface mismatch, or both.
+1. Post-fix authenticated re-validation in target deployment
+- Field findings are now addressed in code/docs, but a fresh live pass is still required to confirm that authenticated run/issue paths are now reliably usable in target deployment(s).
+- In the current local environment used for this branch, Paperclip credentials are not set, so this confirmation cannot be completed here.
 
 2. Optional adapter deep validation
 - WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this local pass, so only skip-path behavior was validated.
@@ -60,9 +61,8 @@ Evidence used in this pass:
 
 ## Blocking issues before public beta
 
-1. Authenticated Paperclip integration reliability is not yet demonstrated
-- External operator path for obtaining/validating required token in authenticated deployments is under-specified.
-- Key Paperclip-backed tool paths are not consistently usable in the validated live environment due auth/API compatibility failures.
+1. Fresh authenticated Paperclip re-validation has not yet been executed after blocker fixes
+- Required closure evidence: successful live run/issue investigation path after applying the new onboarding/preflight/error-shaping improvements.
 
 ## Non-blocking follow-ups after public beta
 
@@ -77,10 +77,10 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: No-go for final public beta announcement yet.**
+**Recommendation: Improved and ready for a fresh server re-validation pass; final public-beta decision remains no-go until that pass is complete.**
 
 Reasoning:
 
 - Repository baseline remains strong (quality gates and core MCP runtime operate).
-- Real configured server validation is now complete and materially changes risk posture: integration behavior in authenticated Paperclip deployments is not yet predictably usable for the full investigation flow.
-- Public-beta confidence should wait for auth-path clarity and endpoint-compatibility validation in target deployment modes.
+- The highest-value authenticated-integration blockers were addressed without scope expansion.
+- One evidence gap remains: a post-fix live authenticated validation pass in target deployment conditions.

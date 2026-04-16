@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PaperclipApiClient } from "../src/integrations/paperclip-client.js";
+import { classifyPaperclipError, PaperclipApiClient } from "../src/integrations/paperclip-client.js";
 import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
@@ -15,6 +15,7 @@ async function main(): Promise<void> {
   const report: Record<string, unknown> = {
     at: new Date().toISOString()
   };
+  const degradedSignals: string[] = [];
   const caddyClient = new CaddyClient();
   const k8sClient = new K8sClient();
   const postgresClient = new PostgresClient();
@@ -28,7 +29,8 @@ async function main(): Promise<void> {
       report.paperclip = {
         status: "ok",
         sourcePath,
-        runs: runs.length
+        runs: runs.length,
+        usability: "usable"
       };
 
       const companyId = process.env.PAPERCLIP_COMPANY_ID;
@@ -43,33 +45,59 @@ async function main(): Promise<void> {
         report.paperclipIssues = {
           status: "ok",
           sourcePath: issueResult.sourcePath,
-          issues: issueResult.issues.length
+          issues: issueResult.issues.length,
+          usability: "usable"
         };
       } else {
         report.paperclipIssues = {
           status: "skipped",
-          reason: "PAPERCLIP_COMPANY_ID is not set"
+          reason: "PAPERCLIP_COMPANY_ID is not set",
+          usability: "degraded",
+          remediation:
+            "Set PAPERCLIP_COMPANY_ID (and optional PAPERCLIP_PROJECT_ID) to validate issue investigation paths."
         };
+        degradedSignals.push("paperclip_issues_not_validated");
       }
     } catch (error: unknown) {
+      const normalized = classifyPaperclipError(error);
+      const remediation =
+        normalized.category === "auth_failure"
+          ? "Verify PAPERCLIP_TOKEN and deployment auth scope."
+          : normalized.category === "endpoint_mismatch"
+            ? "Verify PAPERCLIP_BASE_URL route compatibility for runs/issues endpoints."
+            : "Verify Paperclip API availability and network reachability.";
       report.paperclip = {
         status: "error",
-        error: error instanceof Error ? error.message : String(error)
+        usability: "degraded",
+        error: normalized.message,
+        errorCategory: normalized.category,
+        httpStatus: normalized.status,
+        remediation
       };
       report.paperclipIssues = {
         status: "skipped",
-        reason: "Paperclip run check failed"
+        reason: "Paperclip run check failed",
+        usability: "degraded"
       };
+      degradedSignals.push("paperclip_run_validation_failed");
     }
   } else {
+    const missing: string[] = [];
+    if (!(process.env.PAPERCLIP_BASE_URL ?? "").trim()) missing.push("PAPERCLIP_BASE_URL");
+    if (!(process.env.PAPERCLIP_TOKEN ?? "").trim()) missing.push("PAPERCLIP_TOKEN");
     report.paperclip = {
       status: "skipped",
-      reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set"
+      reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set",
+      usability: "degraded",
+      missing,
+      remediation: "Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN to validate Paperclip-backed tools."
     };
     report.paperclipIssues = {
       status: "skipped",
-      reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set"
+      reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set",
+      usability: "degraded"
     };
+    degradedSignals.push("paperclip_not_configured");
   }
 
   try {
@@ -221,6 +249,16 @@ async function main(): Promise<void> {
       reason: "REDIS_URL is not set"
     };
   }
+
+  const overallStatus = degradedSignals.length > 0 ? "degraded" : "ok";
+  report.summary = {
+    overallStatus,
+    degradedSignals,
+    interpretation:
+      overallStatus === "ok"
+        ? "Runtime and data-plane checks are usable for this smoke pass."
+        : "Process checks completed, but one or more data-plane validations are degraded or skipped."
+  };
 
   console.log(JSON.stringify(report, null, 2));
 }
