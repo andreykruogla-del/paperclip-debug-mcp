@@ -37,6 +37,51 @@ import { RedisClient } from "../integrations/redis-client.js";
 import { SentryClient } from "../integrations/sentry-client.js";
 import { WordPressClient } from "../integrations/wordpress-client.js";
 
+type AdapterUnavailablePayload = {
+  configured: false;
+  reachable: false;
+  error: string;
+  remediation: string;
+};
+
+function asToolResponse<TPayload extends Record<string, unknown>>(payload: TPayload): {
+  structuredContent: TPayload;
+  content: Array<{ type: "text"; text: string }>;
+} {
+  return {
+    structuredContent: payload,
+    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+  };
+}
+
+function adapterNotConfigured(error: string, remediation: string): AdapterUnavailablePayload {
+  return {
+    configured: false,
+    reachable: false,
+    error,
+    remediation
+  };
+}
+
+function adapterUnavailableOnError(params: {
+  configured?: boolean;
+  remediation: string;
+  error: unknown;
+}): {
+  configured: boolean;
+  reachable: false;
+  error: string;
+  remediation: string;
+} {
+  const message = params.error instanceof Error ? params.error.message : String(params.error);
+  return {
+    configured: params.configured ?? true,
+    reachable: false,
+    error: message,
+    remediation: params.remediation
+  };
+}
+
 export function createMcpServer(): McpServer {
   const runtimeConfig = readRuntimeConfig();
   const registry = new CollectorRegistry();
@@ -144,20 +189,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!caddyClient.isEnabled()) {
-        const payload = {
-          configured: false,
-          error: "Caddy is not configured. Set CADDY_HEALTH_URL or CADDY_LOG_PATH."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "Caddy is not configured. Set CADDY_HEALTH_URL or CADDY_LOG_PATH.",
+            "Set CADDY_HEALTH_URL or CADDY_LOG_PATH, then rerun paperclipDebug.caddy_health."
+          )
+        );
       }
-      const payload = await caddyClient.checkHealth();
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await caddyClient.checkHealth();
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify Caddy endpoint/log accessibility and retry paperclipDebug.caddy_health."
+          })
+        );
+      }
     }
   );
 
@@ -170,20 +221,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!runtimeConfig.enableK8sCollector && !runtimeConfig.hasK8sNamespace) {
-        const payload = {
-          configured: false,
-          error: "Kubernetes is not configured. Set K8S_COLLECTOR_ENABLED=true and K8S_NAMESPACE."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "Kubernetes is not configured. Set K8S_COLLECTOR_ENABLED=true and K8S_NAMESPACE.",
+            "Set K8S_COLLECTOR_ENABLED=true and K8S_NAMESPACE, then rerun paperclipDebug.k8s_health."
+          )
+        );
       }
-      const payload = await k8sClient.checkHealth();
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await k8sClient.checkHealth();
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify kubectl access to the target namespace and retry paperclipDebug.k8s_health."
+          })
+        );
+      }
     }
   );
 
@@ -196,20 +253,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!postgresClient.isEnabled()) {
-        const payload = {
-          configured: false,
-          error: "PostgreSQL is not configured. Set POSTGRES_COLLECTOR_ENABLED=true and POSTGRES_URL."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "PostgreSQL is not configured. Set POSTGRES_COLLECTOR_ENABLED=true and POSTGRES_URL.",
+            "Set POSTGRES_COLLECTOR_ENABLED=true and POSTGRES_URL, then rerun paperclipDebug.postgres_health."
+          )
+        );
       }
-      const payload = await postgresClient.checkHealth();
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await postgresClient.checkHealth();
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify PostgreSQL connectivity/credentials and retry paperclipDebug.postgres_health."
+          })
+        );
+      }
     }
   );
 
@@ -222,20 +285,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!redisClient.isEnabled()) {
-        const payload = {
-          configured: false,
-          error: "Redis is not configured. Set REDIS_COLLECTOR_ENABLED=true and REDIS_URL."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "Redis is not configured. Set REDIS_COLLECTOR_ENABLED=true and REDIS_URL.",
+            "Set REDIS_COLLECTOR_ENABLED=true and REDIS_URL, then rerun paperclipDebug.redis_health."
+          )
+        );
       }
-      const payload = await redisClient.checkHealth();
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await redisClient.checkHealth();
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify Redis connectivity/credentials and retry paperclipDebug.redis_health."
+          })
+        );
+      }
     }
   );
 
@@ -248,20 +317,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!sentryClient.isEnabled()) {
-        const payload = {
-          configured: false,
-          error: "Sentry is not configured. Set SENTRY_ORG_SLUG, SENTRY_PROJECT_SLUG, SENTRY_AUTH_TOKEN."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "Sentry is not configured. Set SENTRY_ORG_SLUG, SENTRY_PROJECT_SLUG, SENTRY_AUTH_TOKEN.",
+            "Set SENTRY_ORG_SLUG, SENTRY_PROJECT_SLUG, and SENTRY_AUTH_TOKEN, then rerun paperclipDebug.sentry_health."
+          )
+        );
       }
-      const payload = await sentryClient.checkHealth(20);
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await sentryClient.checkHealth(20);
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify Sentry API access and retry paperclipDebug.sentry_health."
+          })
+        );
+      }
     }
   );
 
@@ -274,20 +349,26 @@ export function createMcpServer(): McpServer {
     },
     async () => {
       if (!wordpressClient.isEnabled()) {
-        const payload = {
-          configured: false,
-          error: "WordPress is not configured. Set WORDPRESS_BASE_URL."
-        };
-        return {
-          structuredContent: payload,
-          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-        };
+        return asToolResponse(
+          adapterNotConfigured(
+            "WordPress is not configured. Set WORDPRESS_BASE_URL.",
+            "Set WORDPRESS_BASE_URL and rerun paperclipDebug.wordpress_health."
+          )
+        );
       }
-      const payload = await wordpressClient.checkHealth();
-      return {
-        structuredContent: payload,
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
-      };
+      try {
+        const payload = await wordpressClient.checkHealth();
+        return asToolResponse(payload);
+      } catch (error: unknown) {
+        return asToolResponse(
+          adapterUnavailableOnError({
+            configured: true,
+            error,
+            remediation:
+              "Verify WordPress endpoint accessibility and retry paperclipDebug.wordpress_health."
+          })
+        );
+      }
     }
   );
 

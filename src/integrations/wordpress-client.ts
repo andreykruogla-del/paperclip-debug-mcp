@@ -7,6 +7,7 @@ type WordPressClientOptions = {
 };
 
 export type WordPressHealth = {
+  configured: boolean;
   baseUrl: string;
   reachable: boolean;
   restApiAvailable: boolean;
@@ -48,6 +49,7 @@ export class WordPressClient {
 
   public async checkHealth(): Promise<WordPressHealth> {
     const result: WordPressHealth = {
+      configured: this.isEnabled(),
       baseUrl: this.baseUrl,
       reachable: false,
       restApiAvailable: false,

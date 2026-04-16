@@ -31,9 +31,19 @@ describe("WordPressClient", () => {
     const client = new WordPressClient({ baseUrl: "https://wp.example.com" });
     const health = await client.checkHealth();
 
+    expect(health.configured).toBe(true);
     expect(health.reachable).toBe(false);
     expect(health.restApiAvailable).toBe(false);
     expect(health.restError).toContain("ECONNREFUSED");
+  });
+
+  it("returns unconfigured state when base url is missing", async () => {
+    const client = new WordPressClient({});
+    const health = await client.checkHealth();
+
+    expect(health.configured).toBe(false);
+    expect(health.reachable).toBe(false);
+    expect(health.restApiAvailable).toBe(false);
   });
 
   it("checks rest/xmlrpc/auth when credentials configured", async () => {
@@ -51,6 +61,7 @@ describe("WordPressClient", () => {
     });
     const health = await client.checkHealth();
 
+    expect(health.configured).toBe(true);
     expect(health.reachable).toBe(true);
     expect(health.restApiAvailable).toBe(true);
     expect(health.xmlrpcEnabled).toBe(true);
