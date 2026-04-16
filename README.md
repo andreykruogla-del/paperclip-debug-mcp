@@ -1,127 +1,109 @@
 # Paperclip Debug MCP
 
-`Paperclip Debug MCP` is an MCP-first debugging layer for Paperclip ecosystems.
+**Stop burning hours and tokens on agent incident triage.**
 
-It gives coding agents structured incident intelligence instead of raw logs and screenshot ping-pong.
+`Paperclip Debug MCP` gives coding agents structured, queryable debug context from Paperclip and Docker.  
+Instead of manual log grepping and screenshot ping-pong, your agent can ask direct forensic questions and get machine-usable answers.
 
-## Why install this
+## What you get
 
-When incidents happen, most teams lose time on:
-- manually jumping between logs, dashboards, and chat
-- repeating the same investigation queries
-- spending extra tokens on context reconstruction
+- Faster root-cause detection for failed agent runs
+- Lower token spend from less repeated context reconstruction
+- One MCP surface for issues, runs, events, services, logs, and incident packets
+- Redaction of token-like secrets in excerpts before they are returned
 
-This project exposes a stable MCP tool surface for incident triage:
-- collector health
-- normalized incidents
-- deduplicated incident clusters
+## Why teams use it
 
-Goal: reduce `time-to-root-cause` and `tokens-per-incident`.
-Sensitive token-like strings are redacted in collector/event/comment excerpts.
+Without this:
+- open multiple tools
+- copy/paste logs manually
+- repeat the same diagnostics every incident
 
-## 60-second start
+With this:
+- call MCP tools
+- get normalized data
+- move directly to fix decisions
+
+## Quick Start
 
 ```bash
 npm install
 cp .env.example .env
-npm run mcp:stdio
 npm run smoke:live
-npm run incident:packet -- --issue-id <issue-id>
+npm run mcp:stdio
 ```
 
-Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:
-- `paperclipDebug.list_collectors`
-- `paperclipDebug.list_incidents`
-- `paperclipDebug.list_incident_clusters`
-- `paperclipDebug.trace_handoff`
-- `paperclipDebug.list_runs`
-- `paperclipDebug.list_issues`
-- `paperclipDebug.get_issue_comments`
-- `paperclipDebug.get_run_events`
-- `paperclipDebug.list_services`
-- `paperclipDebug.get_service_logs`
-- `paperclipDebug.build_incident_packet`
+Optional packet export:
 
-## Live collector config
+```bash
+npm run incident:packet -- --issue-id <issue-id>
+# or
+npm run incident:packet -- --run-id <run-id>
+```
 
-Set env vars before running:
+## Configuration
 
 ```bash
 PAPERCLIP_BASE_URL=https://paperclip.example.com
 PAPERCLIP_TOKEN=...
 PAPERCLIP_COMPANY_ID=...
 PAPERCLIP_PROJECT_ID=...         # optional
-PAPERCLIP_ISSUE_IDS=...,...
+PAPERCLIP_ISSUE_IDS=...,...      # optional override
 PAPERCLIP_MAX_ISSUES=25          # optional
 DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
 ```
 
-You can start from [`.env.example`](.env.example).
+Start from [`.env.example`](.env.example).
 
-Collector behavior:
-- `paperclip-api`: reads issues/comments from Paperclip API (by explicit issue IDs or company/project scope)
-- `docker-cli`: reads real container states from `docker ps -a` and pulls error excerpts from `docker logs`
+## Core MCP Tools
 
-Run/event behavior:
-- `list_runs`: tries Paperclip endpoints (`/api/runs`, `/api/run-logs`) and returns normalized run summaries
-- `list_issues`: returns normalized issue summaries for configured `PAPERCLIP_COMPANY_ID`
-- `get_issue_comments`: returns redacted comments ordered by creation time
-- `get_run_events`: fetches events for a run id (`/api/runs/:id/events` with fallbacks)
-- `build_incident_packet`: builds one evidence packet (issue + comments + run + run events + incidents + clusters)
+- `paperclipDebug.list_collectors`
+- `paperclipDebug.list_incidents`
+- `paperclipDebug.list_incident_clusters`
+- `paperclipDebug.trace_handoff`
+- `paperclipDebug.list_runs`
+- `paperclipDebug.get_run_events`
+- `paperclipDebug.list_issues`
+- `paperclipDebug.get_issue_comments`
+- `paperclipDebug.list_services`
+- `paperclipDebug.get_service_logs`
+- `paperclipDebug.build_incident_packet`
 
-## Current scope (v0)
+## What Makes It Different
 
+- Cross-source normalization (Paperclip + Docker)
+- Incident clustering by fingerprint
+- Handoff-aware tracing
+- Packetized investigation artifacts for handoff and audit
+- Agent-first interface (MCP), not another dashboard dependency
+
+## Current Status
+
+This is an active beta-stage codebase with real collectors and real forensic tooling.
+
+Current scope:
 - MCP `stdio` server
-- pluggable collector/adaptor model
-- real `paperclip-api` collector
-- real `docker-cli` collector
-- run/event forensic tools from Paperclip API
-- normalized incident schema
-- incident dedup clustering by fingerprint
-
-This is intentionally UI-independent.
+- Paperclip API collector (issues/comments/runs/events)
+- Docker collector (services + logs)
+- Incident clustering and handoff trace
+- Incident packet builder and CLI export
 
 ## Works only with one stack?
 
-No.
+No.  
+The architecture is collector-based. Any runtime can be integrated if it maps into normalized incidents/events.
 
-This server is adaptor-based. It can support any user stack as long as a collector returns normalized incidents.
+## Target adapters
 
-Not limited to one environment or one runtime.
-
-## Collector contract
-
-Each collector provides:
-- `id`
-- `kind` (`paperclip`, `docker_service`, `external`)
-- `collectIncidents()`
-
-This keeps MCP tools stable while integrations evolve.
-
-## Target runtime adapters
-
-Priority adapters:
 - `Paperclip`
 - `Hermes Agent`
 - `OpenClaw`
 - `OpenCode`
-- local coding adapters (`Codex`, `Claude`, `Cursor`) via runtime signals
+- local coding runtimes (`Codex`, `Claude`, `Cursor`) via runtime signals
 
-## Build a moat (hard to copy)
+## Practical Outcome
 
-The moat is not a dashboard.
-
-The moat is:
-- normalized cross-runtime incident model
-- high-quality dedup and pattern clustering
-- handoff-aware diagnostics
-- measurable efficiency metrics (`time_to_root_cause`, `tokens_per_incident`, `queries_per_incident`)
-
-## Roadmap estimate
-
-- `v0`: stdio MCP + baseline tools + clustering (`1-2 days`)
-- `v1`: real Paperclip + Docker collectors (`3-5 days`)
-- `v2`: Hermes/OpenClaw/OpenCode adapters + handoff trace (`1-2 weeks`)
-- `v3`: HTTP mode, auth hardening, integration tests (`3-5 days`)
-
-Production-capable baseline: around `2-3 weeks` of focused work.
+The product goal is simple:
+- lower `time_to_root_cause`
+- lower `tokens_per_incident`
+- fewer manual debugging loops per failure
