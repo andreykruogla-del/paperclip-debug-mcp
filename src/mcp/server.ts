@@ -20,7 +20,9 @@ import { readRuntimeConfig } from "../core/runtime-config.js";
 import {
   buildIncidentPacketGuidance,
   buildPrioritizeTriageGuidance,
-  buildSystemSnapshotTriageGuidance
+  buildRunEventsTriageGuidance,
+  buildSystemSnapshotTriageGuidance,
+  buildTraceHandoffTriageGuidance
 } from "../core/triage-guidance.js";
 import { PaperclipApiClient, firstString } from "../integrations/paperclip-client.js";
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
@@ -451,11 +453,18 @@ export function createMcpServer(): McpServer {
       const traces = buildHandoffTraces(incidents);
       const filtered = runId ? traces.filter((trace) => trace.runId === runId) : traces;
       const cut = filtered.slice(0, limit ?? 30);
+      const handoffGuidance = buildTraceHandoffTriageGuidance({
+        traces: cut,
+        requestedRunId: runId
+      });
       return {
         structuredContent: {
           traces: cut,
           totalTraces: filtered.length,
-          totalIncidents: incidents.length
+          totalIncidents: incidents.length,
+          summary: handoffGuidance.summary,
+          topSignals: handoffGuidance.topSignals,
+          recommendedNextTools: handoffGuidance.recommendedNextTools
         },
         content: [
           {
@@ -464,7 +473,10 @@ export function createMcpServer(): McpServer {
               {
                 totalIncidents: incidents.length,
                 totalTraces: filtered.length,
-                traces: cut
+                traces: cut,
+                summary: handoffGuidance.summary,
+                topSignals: handoffGuidance.topSignals,
+                recommendedNextTools: handoffGuidance.recommendedNextTools
               },
               null,
               2
@@ -608,17 +620,36 @@ export function createMcpServer(): McpServer {
 
       const { events, sourcePath } = await getRunEvents(paperclipClient, runId);
       const cut = events.slice(0, limit ?? 1000);
+      const runGuidance = buildRunEventsTriageGuidance({
+        runId,
+        events: cut
+      });
       return {
         structuredContent: {
           sourcePath,
           runId,
           totalEvents: events.length,
-          events: cut
+          events: cut,
+          summary: runGuidance.summary,
+          topSignals: runGuidance.topSignals,
+          recommendedNextTools: runGuidance.recommendedNextTools
         },
         content: [
           {
             type: "text",
-            text: JSON.stringify({ sourcePath, runId, totalEvents: events.length, events: cut }, null, 2)
+            text: JSON.stringify(
+              {
+                sourcePath,
+                runId,
+                totalEvents: events.length,
+                events: cut,
+                summary: runGuidance.summary,
+                topSignals: runGuidance.topSignals,
+                recommendedNextTools: runGuidance.recommendedNextTools
+              },
+              null,
+              2
+            )
           }
         ]
       };

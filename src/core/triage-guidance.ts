@@ -25,6 +25,26 @@ type IncidentPacketLike = {
   clusters: unknown[];
 };
 
+type RunEventLike = {
+  timestamp: number;
+  type: string;
+  level?: string;
+  error?: string;
+  agentId?: string;
+};
+
+type HandoffStepLike = {
+  service: string;
+  severity: "info" | "warning" | "error" | "critical";
+};
+
+type HandoffTraceLike = {
+  runId: string;
+  latestTimestamp: number;
+  highestSeverity: "info" | "warning" | "error" | "critical";
+  steps: HandoffStepLike[];
+};
+
 export type TriageSignal = {
   signal: string;
   reason: string;
@@ -58,6 +78,15 @@ function topProblematicServices(
     .filter((service) => service.problematic)
     .slice(0, limit)
     .map((service) => service.name || service.id);
+}
+
+function eventTypeBreakdown(events: RunEventLike[]): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const event of events) {
+    const key = event.type || "unknown";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 export function buildPrioritizeTriageGuidance(
@@ -335,6 +364,179 @@ export function buildIncidentPacketGuidance(params: {
         hasClusters
       }
     }
+  };
+}
+
+export function buildRunEventsTriageGuidance(params: {
+  runId: string;
+  events: RunEventLike[];
+}): {
+  summary: {
+    runId: string;
+    returnedEvents: number;
+    distinctEventTypes: number;
+    distinctAgents: number;
+    errorLikeEvents: number;
+    firstTimestamp: number | null;
+    lastTimestamp: number | null;
+  };
+  topSignals: TriageSignal[];
+  recommendedNextTools: string[];
+} {
+  const eventTypeCounts = eventTypeBreakdown(params.events);
+  const distinctAgents = new Set(
+    params.events.map((event) => event.agentId).filter((agent): agent is string => Boolean(agent))
+  ).size;
+  const timestamps = params.events.map((event) => event.timestamp).sort((a, b) => a - b);
+
+  const errorLikeEvents = params.events.filter((event) => {
+    if (event.error) return true;
+    const level = event.level?.toLowerCase();
+    if (level === "error" || level === "critical") return true;
+    const type = event.type.toLowerCase();
+    return type.includes("error") || type.includes("fail");
+  }).length;
+
+  const topSignals: TriageSignal[] = [];
+  if (params.events.length === 0) {
+    topSignals.push({
+      signal: "run_has_no_events",
+      reason: "The run returned no events for the requested context."
+    });
+  }
+  if (errorLikeEvents > 0) {
+    topSignals.push({
+      signal: "error_like_events_present",
+      reason: "Run event stream contains error-like events.",
+      value: errorLikeEvents
+    });
+  }
+  if (distinctAgents > 1) {
+    topSignals.push({
+      signal: "multi_agent_activity",
+      reason: "Run events include activity from multiple agents.",
+      value: distinctAgents
+    });
+  }
+  if (eventTypeCounts.length > 0) {
+    topSignals.push({
+      signal: "dominant_event_type",
+      reason: "Most frequent event type can guide focused drilldown.",
+      value: `${eventTypeCounts[0][0]} (${eventTypeCounts[0][1]})`
+    });
+  }
+
+  const recommendedNextTools = uniqueTools(
+    params.events.length === 0
+      ? [
+          "paperclipDebug.list_runs",
+          "paperclipDebug.trace_handoff",
+          "paperclipDebug.system_snapshot"
+        ]
+      : [
+          "paperclipDebug.trace_handoff",
+          "paperclipDebug.build_incident_packet",
+          "paperclipDebug.prioritize_incidents",
+          "paperclipDebug.list_incident_clusters",
+          ...(errorLikeEvents > 0 ? ["paperclipDebug.get_service_logs"] : [])
+        ]
+  ).slice(0, 6);
+
+  return {
+    summary: {
+      runId: params.runId,
+      returnedEvents: params.events.length,
+      distinctEventTypes: eventTypeCounts.length,
+      distinctAgents,
+      errorLikeEvents,
+      firstTimestamp: timestamps.length > 0 ? timestamps[0] : null,
+      lastTimestamp: timestamps.length > 0 ? timestamps[timestamps.length - 1] : null
+    },
+    topSignals: topSignals.slice(0, 5),
+    recommendedNextTools
+  };
+}
+
+export function buildTraceHandoffTriageGuidance(params: {
+  traces: HandoffTraceLike[];
+  requestedRunId?: string;
+}): {
+  summary: {
+    requestedRunId: string | null;
+    returnedTraces: number;
+    totalSteps: number;
+    tracesWithCritical: number;
+    maxStepsInTrace: number;
+  };
+  topSignals: TriageSignal[];
+  recommendedNextTools: string[];
+} {
+  const totalSteps = params.traces.reduce((sum, trace) => sum + trace.steps.length, 0);
+  const tracesWithCritical = params.traces.filter((trace) => trace.highestSeverity === "critical").length;
+  const maxStepsInTrace = params.traces.reduce(
+    (max, trace) => (trace.steps.length > max ? trace.steps.length : max),
+    0
+  );
+
+  const topSignals: TriageSignal[] = [];
+  if (params.traces.length === 0) {
+    topSignals.push({
+      signal: "no_handoff_traces",
+      reason: "No run-linked incident handoff traces were found."
+    });
+  }
+  if (tracesWithCritical > 0) {
+    topSignals.push({
+      signal: "critical_handoff_present",
+      reason: "At least one trace includes critical severity signals.",
+      value: tracesWithCritical
+    });
+  }
+  if (maxStepsInTrace >= 5) {
+    topSignals.push({
+      signal: "long_handoff_chain_detected",
+      reason: "A trace has many handoff steps and may need focused triage.",
+      value: maxStepsInTrace
+    });
+  }
+  if (params.traces.length > 0) {
+    const firstTrace = params.traces[0];
+    const distinctServices = new Set(firstTrace.steps.map((step) => step.service)).size;
+    if (distinctServices > 1) {
+      topSignals.push({
+        signal: "cross_service_handoff",
+        reason: "Top trace spans multiple services.",
+        value: distinctServices
+      });
+    }
+  }
+
+  const recommendedNextTools = uniqueTools(
+    params.traces.length === 0
+      ? [
+          "paperclipDebug.prioritize_incidents",
+          "paperclipDebug.refresh_collectors",
+          "paperclipDebug.system_snapshot"
+        ]
+      : [
+          ...(params.requestedRunId ? ["paperclipDebug.get_run_events"] : ["paperclipDebug.list_runs"]),
+          "paperclipDebug.build_incident_packet",
+          "paperclipDebug.prioritize_incidents",
+          "paperclipDebug.list_incident_clusters",
+          ...(tracesWithCritical > 0 ? ["paperclipDebug.get_service_logs"] : [])
+        ]
+  ).slice(0, 6);
+
+  return {
+    summary: {
+      requestedRunId: params.requestedRunId ?? null,
+      returnedTraces: params.traces.length,
+      totalSteps,
+      tracesWithCritical,
+      maxStepsInTrace
+    },
+    topSignals: topSignals.slice(0, 5),
+    recommendedNextTools
   };
 }
 
