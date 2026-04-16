@@ -5,7 +5,8 @@
   "description": "MCP-first debugging and incident intelligence layer for Paperclip agent systems",
   "type": "module",
   "scripts": {
-    "build": "npx tsc -p tsconfig.json",
+    "clean": "tsx scripts/clean.ts",
+    "build": "npm run clean && npx tsc -p tsconfig.json",
     "mcp:stdio": "tsx scripts/mcp-stdio.ts",
     "check": "npx tsc -p tsconfig.json --noEmit",
     "smoke:live": "tsx scripts/smoke-live.ts",
