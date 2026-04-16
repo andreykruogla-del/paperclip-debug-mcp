@@ -2,8 +2,8 @@
 
 ## Current assessment
 
-Current release-candidate status is **almost ready but still blocked by one environment-dependent validation gap**.
-Since the previous pass, hosted CI confirmation has been closed; the remaining blocker is configured Paperclip-backed live validation.
+Current release-candidate status remains **not yet ready for public beta in authenticated Paperclip deployments**.
+The previously open blocker (configured live-server validation) was completed, and the result surfaced concrete integration risks (auth + endpoint compatibility) that keep the beta decision at no-go.
 
 Evidence used in this pass:
 
@@ -17,8 +17,8 @@ Evidence used in this pass:
   - `npm run check`
   - `npm run test`
   - `npm run build`
-- Branch/PR CI evidence:
-  - PR `#23` (`codex/run-release-candidate-validation`) check `build-and-test`: `SUCCESS`
+- Field validation evidence:
+  - `docs/server-independent-evaluation-and-field-validation-report.md`
 
 ## What is already ready
 
@@ -48,9 +48,9 @@ Evidence used in this pass:
 
 ## What is not yet fully validated
 
-1. Paperclip-backed runtime paths in this environment
-- `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, and `PAPERCLIP_PROJECT_ID` are not set in the available environment.
-- `smoke:live` therefore reports Paperclip checks as `skipped`, and live run/issue path validation cannot be completed from this environment.
+1. Authenticated Paperclip-backed runtime paths with compatible API surface
+- Configured live validation was executed, but Paperclip-dependent calls returned `401 Unauthorized` and `404 API route not found` for key issue/run paths in the tested deployment.
+- This indicates either credential-path/documentation mismatch, API surface mismatch, or both.
 
 2. Optional adapter deep validation
 - WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this local pass, so only skip-path behavior was validated.
@@ -60,8 +60,9 @@ Evidence used in this pass:
 
 ## Blocking issues before public beta
 
-1. Missing configured-environment validation for Paperclip-backed investigation flow
-- A release-candidate pass must include a real environment where Paperclip credentials are set and core issue/run tools are exercised live.
+1. Authenticated Paperclip integration reliability is not yet demonstrated
+- External operator path for obtaining/validating required token in authenticated deployments is under-specified.
+- Key Paperclip-backed tool paths are not consistently usable in the validated live environment due auth/API compatibility failures.
 
 ## Non-blocking follow-ups after public beta
 
@@ -76,10 +77,10 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: No-go for final public beta announcement yet; close one remaining blocker first.**
+**Recommendation: No-go for final public beta announcement yet.**
 
 Reasoning:
 
-- Repository baseline is strong (local quality gates, docs structure, transport baseline, and candidate-branch hosted CI confirmation are ready).
-- The blocker list is now reduced to one precise item: configured Paperclip-backed live validation.
-- Once that environment-specific validation is completed and recorded, the project can move to a credible public-beta go decision without scope expansion.
+- Repository baseline remains strong (quality gates and core MCP runtime operate).
+- Real configured server validation is now complete and materially changes risk posture: integration behavior in authenticated Paperclip deployments is not yet predictably usable for the full investigation flow.
+- Public-beta confidence should wait for auth-path clarity and endpoint-compatibility validation in target deployment modes.
