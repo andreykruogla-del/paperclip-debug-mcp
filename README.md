@@ -73,6 +73,7 @@ Configuration is environment-driven via `.env` (see `.env.example`). Key setting
 - [Runtime Profiles](docs/runtime-profiles.md): practical `.env` profiles for common runtime stacks.
 - [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
 - [Release Readiness Checklist](docs/release-readiness-checklist.md): lightweight public-beta release validation.
+- [Public Beta Readiness Report](docs/public-beta-readiness-report.md): latest release-candidate validation decision memo.
 
 ## MCP Tools
 
