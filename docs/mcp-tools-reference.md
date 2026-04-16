@@ -32,7 +32,7 @@ All tools return machine-readable `structuredContent` plus a JSON text payload i
 ### `paperclipDebug.system_snapshot`
 - Purpose: Return one high-level operational snapshot across collectors, incidents, services, runs, and issues.
 - Use when: You need fast top-level situational awareness.
-- Inputs/output: Optional `runLimit`, `issueLimit`. Returns `summary`, `topIncidents`, plus detailed arrays and optional `paperclipError`.
+- Inputs/output: Optional `runLimit`, `issueLimit`. Returns `summary`, `topIncidents`, plus detailed arrays, optional `paperclipError`, and triage guidance fields (`topSignals`, `recommendedNextTools`).
 
 ## Incident investigation tools
 
@@ -54,12 +54,12 @@ All tools return machine-readable `structuredContent` plus a JSON text payload i
 ### `paperclipDebug.prioritize_incidents`
 - Purpose: Rank incidents by severity, recency, and likely impact.
 - Use when: You need a ranked queue for action.
-- Inputs/output: Optional `limit` and `minBand` (`low|medium|high|critical`). Returns counts plus prioritized `incidents`.
+- Inputs/output: Optional `limit` and `minBand` (`low|medium|high|critical`). Returns counts plus prioritized `incidents`, and triage guidance fields (`summary`, `topSignals`, `recommendedNextTools`).
 
 ### `paperclipDebug.trace_handoff`
 - Purpose: Build run-level handoff traces from incidents with `relatedRunId`.
 - Use when: Ownership flow or multi-stage handoff is unclear.
-- Inputs/output: Optional `runId`, `limit` (max 200). Returns `{ totalIncidents, totalTraces, traces }`.
+- Inputs/output: Optional `runId`, `limit` (max 200). Returns `{ totalIncidents, totalTraces, traces }` plus triage guidance fields (`summary`, `topSignals`, `recommendedNextTools`).
 
 ### `paperclipDebug.list_runs`
 - Purpose: List recent Paperclip runs.
@@ -69,17 +69,17 @@ All tools return machine-readable `structuredContent` plus a JSON text payload i
 ### `paperclipDebug.get_run_events`
 - Purpose: Return normalized events for one run.
 - Use when: You are drilling into a specific failed or suspicious run.
-- Inputs/output: Required `runId`; optional `limit` (max 5000). Returns `{ sourcePath, runId, totalEvents, events }`.
+- Inputs/output: Required `runId`; optional `limit` (max 5000). Returns `{ sourcePath, runId, totalEvents, events }` plus triage guidance fields (`summary`, `topSignals`, `recommendedNextTools`).
 
 ### `paperclipDebug.list_issues`
 - Purpose: List recent Paperclip issues.
 - Use when: Investigation starts from issue backlog/state.
-- Inputs/output: Optional `limit` (max 200), optional `status`. Returns `{ sourcePath, totalIssues, issues }`; requires Paperclip API and `PAPERCLIP_COMPANY_ID`.
+- Inputs/output: Optional `limit` (max 200), optional `status`. Returns `{ sourcePath, totalIssues, issues }` plus triage guidance fields (`summary`, `topSignals`, `recommendedNextTools`); requires Paperclip API and `PAPERCLIP_COMPANY_ID`.
 
 ### `paperclipDebug.get_issue_comments`
 - Purpose: Fetch ordered comments for one issue.
 - Use when: You need timeline/context from issue discussion.
-- Inputs/output: Required `issueId`; optional `limit` (max 2000). Returns `{ issueId, sourcePath, totalComments, comments }`.
+- Inputs/output: Required `issueId`; optional `limit` (max 2000). Returns `{ issueId, sourcePath, totalComments, comments }` plus triage guidance fields (`summary`, `topSignals`, `recommendedNextTools`).
 
 ### `paperclipDebug.list_services`
 - Purpose: List Docker services/containers with problematic markers.
@@ -96,7 +96,7 @@ All tools return machine-readable `structuredContent` plus a JSON text payload i
 ### `paperclipDebug.build_incident_packet`
 - Purpose: Build a single investigation packet combining issue, comments, run, run events, incidents, and clusters.
 - Use when: You need a handoff-ready evidence bundle for one issue/run.
-- Inputs/output: Requires at least one of `issueId` or `runId`; optional `runEventLimit`, `incidentLimit`. Returns `{ packet, summary }`.
+- Inputs/output: Requires at least one of `issueId` or `runId`; optional `runEventLimit`, `incidentLimit`. Returns `{ packet, summary }` with packet guidance (`topSignals`, `recommendedNextTools`, `packetReadiness`).
 
 Note: This tool builds packet data. Repository scripts can export packets to files, but file export itself is outside MCP tool calls.
 
@@ -105,32 +105,32 @@ Note: This tool builds packet data. Repository scripts can export packets to fil
 ### `paperclipDebug.wordpress_health`
 - Purpose: Run WordPress health checks (REST, XML-RPC, optional auth).
 - Use when: Pipelines depend on WordPress endpoints.
-- Inputs/output: No inputs. Returns adapter health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns adapter health payload. If not configured, returns a stable payload with `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ### `paperclipDebug.caddy_health`
 - Purpose: Run Caddy endpoint/log diagnostics.
 - Use when: Proxy/ingress behavior may be involved.
-- Inputs/output: No inputs. Returns health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns health payload. If not configured, returns `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ### `paperclipDebug.sentry_health`
 - Purpose: Check unresolved Sentry issue health.
 - Use when: You need production exception visibility in the same triage flow.
-- Inputs/output: No inputs. Returns health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns health payload. If not configured, returns `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ### `paperclipDebug.k8s_health`
 - Purpose: Run namespace-focused Kubernetes diagnostics.
 - Use when: Workloads run in Kubernetes and pod/namespace health is suspect.
-- Inputs/output: No inputs. Returns health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns health payload. If not configured, returns `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ### `paperclipDebug.postgres_health`
 - Purpose: Run read-only PostgreSQL diagnostics.
 - Use when: You suspect DB locks, long-running queries, or replication lag.
-- Inputs/output: No inputs. Returns health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns health payload. If not configured, returns `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ### `paperclipDebug.redis_health`
 - Purpose: Run read-only Redis diagnostics.
 - Use when: Cache/queue symptoms suggest latency, memory pressure, or evictions.
-- Inputs/output: No inputs. Returns health payload or `{ configured: false, error }`.
+- Inputs/output: No inputs. Returns health payload. If not configured, returns `configured: false`, `reachable: false`, `error`, and `remediation`.
 
 ## Notes
 
