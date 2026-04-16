@@ -1,6 +1,10 @@
 export type RuntimeConfig = {
   enablePaperclipCollector: boolean;
   enableDockerCollector: boolean;
+  enableFileCollector: boolean;
+  fileCollectorPathsCount: number;
+  fileCollectorMaxLines: number;
+  fileCollectorPattern: string;
   mcpHttpPort: number;
   mcpHttpAuthEnabled: boolean;
   hasPaperclipBaseUrl: boolean;
@@ -26,9 +30,18 @@ function parsePositiveInt(value: string | undefined, defaultValue: number): numb
 
 export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
   const mcpHttpPort = parsePositiveInt(env.MCP_HTTP_PORT, 8787);
+  const fileCollectorPattern = env.FILE_COLLECTOR_INCLUDE_PATTERN?.trim() || "error|exception|failed|timeout|refused|unauthor";
+  const fileCollectorPaths = (env.FILE_COLLECTOR_PATHS ?? "")
+    .split(/[;,]/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
   return {
     enablePaperclipCollector: parseBoolean(env.PAPERCLIP_COLLECTOR_ENABLED, true),
     enableDockerCollector: parseBoolean(env.DOCKER_COLLECTOR_ENABLED, true),
+    enableFileCollector: parseBoolean(env.FILE_COLLECTOR_ENABLED, false),
+    fileCollectorPathsCount: fileCollectorPaths.length,
+    fileCollectorMaxLines: Math.min(parsePositiveInt(env.FILE_COLLECTOR_MAX_LINES, 300), 5000),
+    fileCollectorPattern,
     mcpHttpPort,
     mcpHttpAuthEnabled: Boolean(env.MCP_HTTP_AUTH_TOKEN && env.MCP_HTTP_AUTH_TOKEN.trim().length > 0),
     hasPaperclipBaseUrl: Boolean(env.PAPERCLIP_BASE_URL && env.PAPERCLIP_BASE_URL.trim().length > 0),

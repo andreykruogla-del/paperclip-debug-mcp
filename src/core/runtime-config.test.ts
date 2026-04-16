@@ -7,6 +7,9 @@ describe("readRuntimeConfig", () => {
     const cfg = readRuntimeConfig({});
     expect(cfg.enablePaperclipCollector).toBe(true);
     expect(cfg.enableDockerCollector).toBe(true);
+    expect(cfg.enableFileCollector).toBe(false);
+    expect(cfg.fileCollectorPathsCount).toBe(0);
+    expect(cfg.fileCollectorMaxLines).toBe(300);
     expect(cfg.mcpHttpPort).toBe(8787);
     expect(cfg.mcpHttpAuthEnabled).toBe(false);
     expect(cfg.paperclipMaxIssues).toBe(25);
@@ -16,12 +19,20 @@ describe("readRuntimeConfig", () => {
     const cfg = readRuntimeConfig({
       PAPERCLIP_COLLECTOR_ENABLED: "false",
       DOCKER_COLLECTOR_ENABLED: "0",
+      FILE_COLLECTOR_ENABLED: "1",
+      FILE_COLLECTOR_PATHS: "/tmp/a.log;/tmp/b.log",
+      FILE_COLLECTOR_MAX_LINES: "9999",
+      FILE_COLLECTOR_INCLUDE_PATTERN: "panic|fatal",
       MCP_HTTP_PORT: "9901",
       MCP_HTTP_AUTH_TOKEN: "token",
       PAPERCLIP_MAX_ISSUES: "500"
     });
     expect(cfg.enablePaperclipCollector).toBe(false);
     expect(cfg.enableDockerCollector).toBe(false);
+    expect(cfg.enableFileCollector).toBe(true);
+    expect(cfg.fileCollectorPathsCount).toBe(2);
+    expect(cfg.fileCollectorMaxLines).toBe(5000);
+    expect(cfg.fileCollectorPattern).toBe("panic|fatal");
     expect(cfg.mcpHttpPort).toBe(9901);
     expect(cfg.mcpHttpAuthEnabled).toBe(true);
     expect(cfg.paperclipMaxIssues).toBe(200);

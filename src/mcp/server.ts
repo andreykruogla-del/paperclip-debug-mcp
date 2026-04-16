@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
+import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
@@ -24,6 +25,13 @@ export function createMcpServer(): McpServer {
     })
   );
   registry.register(new DockerCliCollector(40, runtimeConfig.enableDockerCollector));
+  registry.register(
+    new FileSystemLogCollector({
+      enabled: runtimeConfig.enableFileCollector,
+      maxLines: runtimeConfig.fileCollectorMaxLines,
+      includePattern: runtimeConfig.fileCollectorPattern
+    })
+  );
   const paperclipClient = new PaperclipApiClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
   const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);

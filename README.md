@@ -81,6 +81,10 @@ PAPERCLIP_ISSUE_IDS=...,...      # optional override
 PAPERCLIP_MAX_ISSUES=25          # optional
 PAPERCLIP_COLLECTOR_ENABLED=true
 DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
+FILE_COLLECTOR_ENABLED=false     # enable host log collector
+FILE_COLLECTOR_PATHS=            # ; or , separated log file paths
+FILE_COLLECTOR_MAX_LINES=300     # tail lines per file
+FILE_COLLECTOR_INCLUDE_PATTERN=error|exception|failed|timeout|refused|unauthor
 MCP_HTTP_PORT=8787
 MCP_HTTP_AUTH_TOKEN=...          # optional bearer token for HTTP mode
 ```
@@ -132,6 +136,7 @@ Current scope:
 - MCP `stdio` server
 - Paperclip API collector (issues/comments/runs/events)
 - Docker collector (services + logs)
+- Filesystem log collector (host log files via configured paths)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export
