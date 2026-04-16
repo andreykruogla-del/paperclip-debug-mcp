@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildIncidentPacketGuidance,
   buildIssueCommentsTriageGuidance,
   buildListIssuesTriageGuidance,
+  buildPrioritizeTriageGuidance,
   buildRunEventsTriageGuidance,
+  buildSystemSnapshotTriageGuidance,
   buildTraceHandoffTriageGuidance
 } from "./triage-guidance.js";
 
@@ -76,6 +79,71 @@ describe("triage guidance", () => {
     expect(guidance.summary.returnedTraces).toBe(0);
     expect(guidance.topSignals[0]?.signal).toBe("no_handoff_traces");
     expect(guidance.recommendedNextTools).toContain("paperclipDebug.refresh_collectors");
+  });
+
+  it("builds prioritize guidance with advisory correlation hints", () => {
+    const guidance = buildPrioritizeTriageGuidance([
+      {
+        service: "api",
+        priorityBand: "critical",
+        relatedRunId: "run-1"
+      },
+      {
+        service: "api",
+        priorityBand: "high",
+        relatedRunId: "run-2"
+      },
+      {
+        service: "worker",
+        priorityBand: "medium"
+      }
+    ]);
+
+    expect(guidance.correlationHints.dominantLane).toBe("mixed");
+    expect(guidance.correlationHints.dominantServices).toContain("api");
+    expect(guidance.correlationHints.runLinkedIncidentRatio).toBeGreaterThan(0.6);
+  });
+
+  it("builds system snapshot guidance with dependency lane hints", () => {
+    const guidance = buildSystemSnapshotTriageGuidance({
+      collectors: [{ lastError: "timeout" }],
+      summary: {
+        incidents: 5,
+        criticalOrHigh: 2,
+        services: 2,
+        problematicServices: 0,
+        runs: 0,
+        issues: 0
+      },
+      topIncidents: [],
+      services: [],
+      paperclipError: "Paperclip API unavailable"
+    });
+
+    expect(guidance.correlationHints.dominantLane).toBe("dependency");
+    expect(guidance.correlationHints.dependencySignals.failingCollectors).toBe(1);
+    expect(guidance.correlationHints.dependencySignals.paperclipUnavailableOrMisconfigured).toBe(true);
+  });
+
+  it("builds packet guidance with cross-source correlation hints", () => {
+    const guidance = buildIncidentPacketGuidance({
+      packet: {
+        issue: { issueId: "issue-1", relatedRunId: "run-1" },
+        comments: [{ id: 1 }],
+        run: { runId: "run-1" },
+        runEvents: [{ id: 1 }],
+        relatedIncidents: [
+          { service: "api" },
+          { service: "api" },
+          { service: "worker" }
+        ],
+        clusters: [{ id: "c1" }]
+      }
+    });
+
+    expect(guidance.correlationHints.dominantLane).toBe("mixed");
+    expect(guidance.correlationHints.dominantServices).toContain("api");
+    expect(guidance.correlationHints.crossSourceEvidenceCount).toBe(4);
   });
 
   it("builds issue list guidance with run-linked signal", () => {

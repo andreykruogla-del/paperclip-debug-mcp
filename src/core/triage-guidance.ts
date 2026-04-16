@@ -63,6 +63,8 @@ type IssueCommentLike = {
   authorId?: string;
 };
 
+type CorrelationLane = "run" | "issue" | "service" | "dependency" | "mixed" | "baseline";
+
 export type TriageSignal = {
   signal: string;
   reason: string;
@@ -116,6 +118,21 @@ function issueStatusBreakdown(issues: IssueLike[]): Array<[string, number]> {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+function topServicesFromUnknownIncidents(items: unknown[], limit = 2): string[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.service !== "string" || record.service.trim().length === 0) continue;
+    const key = record.service.trim();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([service]) => service);
+}
+
 export function buildPrioritizeTriageGuidance(
   incidents: PrioritizedIncidentLike[],
   minBand?: PriorityBand
@@ -128,6 +145,12 @@ export function buildPrioritizeTriageGuidance(
   };
   topSignals: TriageSignal[];
   recommendedNextTools: string[];
+  correlationHints: {
+    dominantLane: Exclude<CorrelationLane, "issue" | "dependency">;
+    runLinkedIncidentRatio: number;
+    dominantServices: string[];
+    rationale: string[];
+  };
 } {
   const byBand: Record<PriorityBand, number> = {
     low: 0,
@@ -142,6 +165,7 @@ export function buildPrioritizeTriageGuidance(
 
   const runLinkedCount = incidents.filter((incident) => Boolean(incident.relatedRunId)).length;
   const dominantServices = topServicesFromIncidents(incidents, 2);
+  const runLinkedIncidentRatio = incidents.length > 0 ? runLinkedCount / incidents.length : 0;
 
   const topSignals: TriageSignal[] = [];
   if (byBand.critical > 0) {
@@ -199,6 +223,34 @@ export function buildPrioritizeTriageGuidance(
         ]
   ).slice(0, 6);
 
+  let dominantLane: Exclude<CorrelationLane, "issue" | "dependency"> = "baseline";
+  if (incidents.length > 0) {
+    if (runLinkedIncidentRatio >= 0.6 && dominantServices.length > 0) {
+      dominantLane = "mixed";
+    } else if (runLinkedIncidentRatio >= 0.6) {
+      dominantLane = "run";
+    } else if (dominantServices.length > 0 && runLinkedIncidentRatio <= 0.25) {
+      dominantLane = "service";
+    } else if (runLinkedCount > 0 && dominantServices.length > 0) {
+      dominantLane = "mixed";
+    } else if (runLinkedCount > 0) {
+      dominantLane = "run";
+    } else if (dominantServices.length > 0) {
+      dominantLane = "service";
+    }
+  }
+
+  const rationale: string[] = [];
+  if (runLinkedCount > 0) {
+    rationale.push(`${runLinkedCount}/${incidents.length} incidents are run-linked.`);
+  }
+  if (dominantServices.length > 0) {
+    rationale.push(`Incident concentration is highest in: ${dominantServices.join(", ")}.`);
+  }
+  if (incidents.length === 0) {
+    rationale.push("No incidents were returned for this filter.");
+  }
+
   return {
     summary: {
       requestedMinBand: minBand ?? null,
@@ -207,7 +259,13 @@ export function buildPrioritizeTriageGuidance(
       hasRunLinkedIncidents: runLinkedCount > 0
     },
     topSignals: topSignals.slice(0, 5),
-    recommendedNextTools
+    recommendedNextTools,
+    correlationHints: {
+      dominantLane,
+      runLinkedIncidentRatio: Number(runLinkedIncidentRatio.toFixed(3)),
+      dominantServices,
+      rationale: rationale.slice(0, 3)
+    }
   };
 }
 
@@ -227,10 +285,23 @@ export function buildSystemSnapshotTriageGuidance(params: {
 }): {
   topSignals: TriageSignal[];
   recommendedNextTools: string[];
+  correlationHints: {
+    dominantLane: CorrelationLane;
+    runLinkedTopIncidentCount: number;
+    problematicServices: string[];
+    dependencySignals: {
+      failingCollectors: number;
+      paperclipUnavailableOrMisconfigured: boolean;
+    };
+    rationale: string[];
+  };
 } {
   const failingCollectors = params.collectors.filter((collector) => Boolean(collector.lastError));
   const problematicServiceNames = topProblematicServices(params.services, 2);
   const hasRunLinkedTopIncident = params.topIncidents.some((incident) => Boolean(incident.relatedRunId));
+  const runLinkedTopIncidentCount = params.topIncidents.filter((incident) => Boolean(incident.relatedRunId))
+    .length;
+  const dependencySignalCount = failingCollectors.length + (params.paperclipError ? 1 : 0);
 
   const topSignals: TriageSignal[] = [];
   if (params.summary.criticalOrHigh > 0) {
@@ -290,9 +361,50 @@ export function buildSystemSnapshotTriageGuidance(params: {
       : [])
   ]).slice(0, 7);
 
+  let dominantLane: CorrelationLane = "baseline";
+  if (dependencySignalCount > 0 && params.summary.problematicServices === 0 && !hasRunLinkedTopIncident) {
+    dominantLane = "dependency";
+  } else if (params.summary.problematicServices > 0 && hasRunLinkedTopIncident) {
+    dominantLane = "mixed";
+  } else if (params.summary.problematicServices > 0) {
+    dominantLane = "service";
+  } else if (hasRunLinkedTopIncident) {
+    dominantLane = "run";
+  } else if (params.summary.issues > 0) {
+    dominantLane = "issue";
+  } else if (dependencySignalCount > 0) {
+    dominantLane = "dependency";
+  }
+
+  const rationale: string[] = [];
+  if (runLinkedTopIncidentCount > 0) {
+    rationale.push(`${runLinkedTopIncidentCount} top incidents are run-linked.`);
+  }
+  if (params.summary.problematicServices > 0) {
+    rationale.push(`${params.summary.problematicServices} problematic services detected.`);
+  }
+  if (dependencySignalCount > 0) {
+    rationale.push(
+      `Dependency signals present (collector failures: ${failingCollectors.length}, paperclipError: ${Boolean(params.paperclipError)}).`
+    );
+  }
+  if (rationale.length === 0) {
+    rationale.push("No dominant cross-source concentration detected in the snapshot.");
+  }
+
   return {
     topSignals: topSignals.slice(0, 5),
-    recommendedNextTools
+    recommendedNextTools,
+    correlationHints: {
+      dominantLane,
+      runLinkedTopIncidentCount,
+      problematicServices: problematicServiceNames,
+      dependencySignals: {
+        failingCollectors: failingCollectors.length,
+        paperclipUnavailableOrMisconfigured: Boolean(params.paperclipError)
+      },
+      rationale: rationale.slice(0, 3)
+    }
   };
 }
 
@@ -312,6 +424,12 @@ export function buildIncidentPacketGuidance(params: {
       hasClusters: boolean;
     };
   };
+  correlationHints: {
+    dominantLane: Exclude<CorrelationLane, "dependency">;
+    dominantServices: string[];
+    crossSourceEvidenceCount: number;
+    rationale: string[];
+  };
 } {
   const hasIssueContext = Boolean(params.packet.issue?.issueId);
   const hasRunContext = Boolean(params.packet.run?.runId || params.packet.issue?.relatedRunId);
@@ -319,6 +437,7 @@ export function buildIncidentPacketGuidance(params: {
   const hasRunEvents = (params.packet.runEvents?.length ?? 0) > 0;
   const hasRelatedIncidents = params.packet.relatedIncidents.length > 0;
   const hasClusters = params.packet.clusters.length > 0;
+  const dominantServices = topServicesFromUnknownIncidents(params.packet.relatedIncidents, 2);
 
   const evidenceHits = [hasComments, hasRunEvents, hasRelatedIncidents, hasClusters].filter(Boolean)
     .length;
@@ -377,6 +496,34 @@ export function buildIncidentPacketGuidance(params: {
     ...(hasRunContext ? ["paperclipDebug.trace_handoff"] : [])
   ]).slice(0, 7);
 
+  const crossSourceEvidenceCount = [hasComments, hasRunEvents, hasRelatedIncidents, hasClusters].filter(Boolean)
+    .length;
+
+  let dominantLane: Exclude<CorrelationLane, "dependency"> = "baseline";
+  if ((hasIssueContext || hasComments) && (hasRunContext || hasRunEvents)) {
+    dominantLane = "mixed";
+  } else if (hasRunContext || hasRunEvents) {
+    dominantLane = "run";
+  } else if (hasIssueContext || hasComments) {
+    dominantLane = "issue";
+  } else if (dominantServices.length > 0) {
+    dominantLane = "service";
+  }
+
+  const rationale: string[] = [];
+  if (hasIssueContext || hasComments) {
+    rationale.push("Issue-side evidence is present in the packet.");
+  }
+  if (hasRunContext || hasRunEvents) {
+    rationale.push("Run-side evidence is present in the packet.");
+  }
+  if (dominantServices.length > 0) {
+    rationale.push(`Related incidents concentrate in: ${dominantServices.join(", ")}.`);
+  }
+  if (rationale.length === 0) {
+    rationale.push("Packet has limited cross-source evidence and needs deeper collection.");
+  }
+
   return {
     topSignals: topSignals.slice(0, 6),
     recommendedNextTools,
@@ -390,6 +537,12 @@ export function buildIncidentPacketGuidance(params: {
         hasRelatedIncidents,
         hasClusters
       }
+    },
+    correlationHints: {
+      dominantLane,
+      dominantServices,
+      crossSourceEvidenceCount,
+      rationale: rationale.slice(0, 3)
     }
   };
 }
