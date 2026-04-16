@@ -497,7 +497,8 @@ export function createMcpServer(): McpServer {
           incidents: filtered,
           summary: triageGuidance.summary,
           topSignals: triageGuidance.topSignals,
-          recommendedNextTools: triageGuidance.recommendedNextTools
+          recommendedNextTools: triageGuidance.recommendedNextTools,
+          correlationHints: triageGuidance.correlationHints
         },
         content: [
           {
@@ -509,7 +510,8 @@ export function createMcpServer(): McpServer {
                 incidents: filtered,
                 summary: triageGuidance.summary,
                 topSignals: triageGuidance.topSignals,
-                recommendedNextTools: triageGuidance.recommendedNextTools
+                recommendedNextTools: triageGuidance.recommendedNextTools,
+                correlationHints: triageGuidance.correlationHints
               },
               null,
               2
@@ -929,7 +931,8 @@ export function createMcpServer(): McpServer {
           },
           topSignals: packetGuidance.topSignals,
           recommendedNextTools: packetGuidance.recommendedNextTools,
-          packetReadiness: packetGuidance.packetReadiness
+          packetReadiness: packetGuidance.packetReadiness,
+          correlationHints: packetGuidance.correlationHints
         },
         content: [
           {
@@ -947,7 +950,8 @@ export function createMcpServer(): McpServer {
                 },
                 topSignals: packetGuidance.topSignals,
                 recommendedNextTools: packetGuidance.recommendedNextTools,
-                packetReadiness: packetGuidance.packetReadiness
+                packetReadiness: packetGuidance.packetReadiness,
+                correlationHints: packetGuidance.correlationHints
               },
               null,
               2
@@ -1027,7 +1031,8 @@ export function createMcpServer(): McpServer {
         structuredContent: {
           ...payload,
           topSignals: triageGuidance.topSignals,
-          recommendedNextTools: triageGuidance.recommendedNextTools
+          recommendedNextTools: triageGuidance.recommendedNextTools,
+          correlationHints: triageGuidance.correlationHints
         },
         content: [
           {
@@ -1036,7 +1041,8 @@ export function createMcpServer(): McpServer {
               {
                 ...payload,
                 topSignals: triageGuidance.topSignals,
-                recommendedNextTools: triageGuidance.recommendedNextTools
+                recommendedNextTools: triageGuidance.recommendedNextTools,
+                correlationHints: triageGuidance.correlationHints
               },
               null,
               2
