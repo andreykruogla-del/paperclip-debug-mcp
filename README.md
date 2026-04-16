@@ -1,55 +1,40 @@
 # Paperclip Debug MCP
 
-**Stop burning hours and tokens on agent incident triage.**
+Paperclip Debug MCP is an MCP-first debugging and incident intelligence layer for Paperclip-based agent systems.
 
-`Paperclip Debug MCP` gives coding agents structured, queryable debug context from Paperclip and Docker.  
-Instead of manual log grepping and screenshot ping-pong, your agent can ask direct forensic questions and get machine-usable answers.
+## What It Is and Why
 
-## What you get
+When incidents are investigated with disconnected tools, teams lose time rebuilding context from logs, run events, issue threads, and infrastructure signals.
 
-- Faster root-cause detection for failed agent runs
-- Lower token spend from less repeated context reconstruction
-- One MCP surface for issues, runs, events, services, logs, and incident packets
-- Redaction of token-like secrets in excerpts before they are returned
+Paperclip Debug MCP provides one queryable interface so coding agents can retrieve structured evidence and move faster to actionable root-cause hypotheses.
 
-## Why teams use it
+Observed impact from internal tests (directional ranges, not guarantees):
 
-Without this:
-- open multiple tools
-- copy/paste logs manually
-- repeat the same diagnostics every incident
+- Time to first root-cause hypothesis: `-40% to -85%`
+- Debug loops per incident: `-30% to -70%`
+- Tokens per resolved incident: `-25% to -65%`
+- Time to build evidence packet: `-60% to -95%`
 
-With this:
-- call MCP tools
-- get normalized data
-- move directly to fix decisions
+## Unified Control Layer
 
-## Observed Impact (Internal Tests)
+The core product idea is a single control layer with adapters, instead of a fragmented stack of standalone debugging utilities.
 
-These are directional ranges, not hard guarantees.  
-Actual gains depend on your log quality, incident complexity, and how many adapters are connected.
+This layer:
 
-| Metric | Baseline (No MCP debug layer) | With Paperclip Debug MCP | Typical Delta |
-|---|---|---|---|
-| Time to first root-cause hypothesis | 20-90 min | 5-25 min | **-40% to -85%** |
-| Debug loops per incident | 6-20 loops | 2-8 loops | **-30% to -70%** |
-| Tokens spent per resolved incident | 1.0x | 0.35x-0.75x | **-25% to -65%** |
-| Time to build evidence packet | 20-60 min | 2-10 min | **-60% to -95%** |
+- normalizes signals from multiple sources into one incident model;
+- exposes a single MCP surface for investigation workflows;
+- scales through adapter-based extension without rewriting core triage tooling.
 
-Baseline means: manual logs + copy/paste + repeated context reconstruction.  
-With MCP means: normalized tools + direct forensic queries + packet export.
+Current coverage includes Paperclip API, Docker, host file logs, and optional health adapters for WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis.
 
-## How We Measure
+## What You Get
 
-Measure both modes on the same set of incidents:
-
-1. Start timer when incident is first detected.
-2. Stop when engineer/agent records first actionable root-cause hypothesis.
-3. Count query/debug loops (`ask -> inspect -> re-ask`).
-4. Record model token usage until incident is closed.
-5. Track packet assembly time (all evidence collected for handoff).
-
-Keep at least 10 incidents per environment to get stable numbers.
+- Faster incident triage and prioritization.
+- Incident clustering by fingerprint and trend analysis.
+- Run-level handoff tracing for investigation continuity.
+- Unified queries for runs, events, issues, comments, services, and logs.
+- Incident packet generation for handoff and audit workflows.
+- Redaction of token-like secrets in returned excerpts.
 
 ## Quick Start
 
@@ -59,79 +44,32 @@ cp .env.example .env
 npm run doctor
 npm run smoke:live
 npm run mcp:stdio
+# or
 npm run mcp:http
 ```
 
-Optional packet export:
+Optional incident packet export:
 
 ```bash
 npm run incident:packet -- --issue-id <issue-id>
 # or
 npm run incident:packet -- --run-id <run-id>
-npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchmark.md
 ```
 
-## Configuration
+Configuration is environment-driven via `.env` (see `.env.example`). Key settings include `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, collector enable flags, and HTTP transport options.
 
-### Core configuration
+## Documentation
 
-```bash
-PAPERCLIP_BASE_URL=https://paperclip.example.com
-PAPERCLIP_TOKEN=...
-PAPERCLIP_COMPANY_ID=...
-PAPERCLIP_PROJECT_ID=...         # optional
-PAPERCLIP_ISSUE_IDS=...,...      # optional override
-PAPERCLIP_MAX_ISSUES=25          # optional
-PAPERCLIP_COLLECTOR_ENABLED=true
-DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
-MCP_HTTP_PORT=8787
-MCP_HTTP_AUTH_TOKEN=...          # optional bearer token for HTTP mode
-```
+- [MCP Playbook](docs/mcp-playbook.md): ready-to-run diagnostic call sequences.
+- [Runtime Profiles](docs/runtime-profiles.md): practical `.env` profiles for common runtime stacks.
+- [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
 
-### Optional adapter configuration
+## MCP Tools
 
-```bash
-FILE_COLLECTOR_ENABLED=false     # host log collector
-FILE_COLLECTOR_PATHS=            # ; or , separated log file paths
-FILE_COLLECTOR_MAX_LINES=300
-FILE_COLLECTOR_INCLUDE_PATTERN=error|exception|failed|timeout|refused|unauthor
+Core tools:
 
-WORDPRESS_COLLECTOR_ENABLED=false
-WORDPRESS_BASE_URL=              # e.g. https://site.example.com
-WORDPRESS_USERNAME=              # optional for auth check
-WORDPRESS_APP_PASSWORD=          # optional for auth check
-
-CADDY_COLLECTOR_ENABLED=false
-CADDY_HEALTH_URL=                # e.g. https://paperclip.example.com/healthz
-CADDY_LOG_PATH=                  # optional caddy log path
-CADDY_LOG_TAIL_LINES=200
-
-SENTRY_COLLECTOR_ENABLED=false
-SENTRY_BASE_URL=https://sentry.io/api/0
-SENTRY_ORG_SLUG=
-SENTRY_PROJECT_SLUG=
-SENTRY_AUTH_TOKEN=
-
-K8S_COLLECTOR_ENABLED=false
-K8S_NAMESPACE=default
-POSTGRES_COLLECTOR_ENABLED=false
-POSTGRES_URL=
-REDIS_COLLECTOR_ENABLED=false
-REDIS_URL=redis://localhost:6379/0
-
-# Future optional adapters (template)
-```
-
-Start from [`.env.example`](.env.example).
-
-When adding any new optional adapter, update both:
-- this `Optional adapter configuration` block
-- [`.env.example`](.env.example)
-
-## Core MCP Tools
-
-- `paperclipDebug.list_collectors`
 - `paperclipDebug.get_runtime_config`
+- `paperclipDebug.list_collectors`
 - `paperclipDebug.refresh_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
@@ -147,7 +85,7 @@ When adding any new optional adapter, update both:
 - `paperclipDebug.build_incident_packet`
 - `paperclipDebug.system_snapshot`
 
-## Optional Adapter Tools
+Optional adapter tools:
 
 - `paperclipDebug.wordpress_health`
 - `paperclipDebug.caddy_health`
@@ -156,85 +94,51 @@ When adding any new optional adapter, update both:
 - `paperclipDebug.postgres_health`
 - `paperclipDebug.redis_health`
 
-## Transport Modes
+## Transports
 
-- `mcp:stdio`: local stdio mode for direct local MCP clients
-- `mcp:http`: streamable HTTP MCP server
+- `mcp:stdio`: local stdio mode for MCP clients.
+- `mcp:http`: streamable HTTP MCP server mode.
 
 HTTP endpoints:
+
 - `POST /mcp`
 - `GET /mcp`
 - `DELETE /mcp`
 - `GET /healthz`
 
-## What Makes It Different
-
-- Cross-source normalization (Paperclip + Docker)
-- Incident clustering by fingerprint
-- Handoff-aware tracing
-- Packetized investigation artifacts for handoff and audit
-- Agent-first interface (MCP), not another dashboard dependency
+Optional bearer auth is supported via `MCP_HTTP_AUTH_TOKEN`.
 
 ## Current Status
 
-This is an active beta-stage codebase with real collectors and real forensic tooling.
+This project is in active beta with working collectors and investigation tooling.
 
 Current scope:
-- MCP `stdio` server
-- Paperclip API collector (issues/comments/runs/events)
-- Docker collector (services + logs)
-- Filesystem log collector (host log files via configured paths)
-- Optional WordPress health collector (REST availability, XML-RPC, auth check)
-- Optional Caddy health collector (health endpoint and proxy log diagnostics)
-- Optional Sentry health collector (unresolved/high-severity issue diagnostics)
-- Optional Kubernetes health collector (namespace/pod diagnostics via kubectl)
-- Optional PostgreSQL health collector (locks/long-running queries/replication lag)
-- Optional Redis health collector (latency/memory/evictions/rejected connections)
-- Incident clustering and handoff trace
-- Incident prioritization and system snapshot
+
+- MCP server (`stdio` and `http`)
+- Paperclip API collector (issues, comments, runs, events)
+- Docker collector (services and logs)
+- Filesystem log collector
+- Optional ecosystem adapters: WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, Redis
+- Incident clustering, trends, prioritization, and handoff trace
 - Incident packet builder and CLI export
 
-## Quality Gates
+## Development
+
+Quality and build commands:
 
 ```bash
 npm run check
 npm run build
 npm run test
+```
+
+Operational utility commands:
+
+```bash
+npm run doctor
+npm run smoke:live
+npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchmark.md
 npm run collector:new -- --name wordpress --kind external
 ```
 
-## Playbook
-
-See [docs/mcp-playbook.md](docs/mcp-playbook.md) for ready diagnostic call sequences.
-See [docs/collector-adapter-guide.md](docs/collector-adapter-guide.md) to add new runtime adapters.
-See [docs/runtime-profiles.md](docs/runtime-profiles.md) for ready `.env` profiles (Paperclip/Docker/Hermes/OpenClaw/OpenCode).
-
-## Works only with one stack?
-
-No.  
-The architecture is collector-based. Any runtime can be integrated if it maps into normalized incidents/events.
-
-## Core Stack Adapters
-
-- `Paperclip`
-- `Hermes Agent`
-- `OpenClaw`
-- `OpenCode`
-- `Telegram bridge`
-- local coding runtimes (`Codex`, `Claude`, `Cursor`) via runtime signals
-
-## Optional Ecosystem Adapters
-
-- `WordPress`
-- `Kubernetes`
-- `PostgreSQL`
-- `Redis`
-- `Caddy` / `Nginx`
-- `Sentry`
-
-## Practical Outcome
-
-The product goal is simple:
-- lower `time_to_root_cause`
-- lower `tokens_per_incident`
-- fewer manual debugging loops per failure
+When adding a new optional adapter, update `README.md`, `.env.example`, and `docs/runtime-profiles.md` in the same PR.
