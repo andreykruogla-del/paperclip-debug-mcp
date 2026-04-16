@@ -1,0 +1,49 @@
+# MCP Playbook
+
+This playbook gives ready-to-run diagnostic sequences for coding agents.
+
+## 1) Fast triage (3 calls)
+
+1. `paperclipDebug.system_snapshot`
+2. `paperclipDebug.prioritize_incidents` with `minBand=high`
+3. `paperclipDebug.list_services` with `includeHealthy=false`
+
+Use this when you need immediate operational focus.
+
+## 2) Failed run investigation
+
+1. `paperclipDebug.list_runs` (find failed run)
+2. `paperclipDebug.get_run_events` (target run id)
+3. `paperclipDebug.trace_handoff` (same run id)
+
+Use this when agent handoff chain is unclear.
+
+## 3) Issue-centered investigation
+
+1. `paperclipDebug.list_issues`
+2. `paperclipDebug.get_issue_comments`
+3. `paperclipDebug.build_incident_packet` with `issueId`
+
+Use this for structured handoff between CTO/Coder/QA/Observer.
+
+## 4) Service outage path
+
+1. `paperclipDebug.list_services` (problematic containers)
+2. `paperclipDebug.get_service_logs` (target service)
+3. `paperclipDebug.prioritize_incidents` (to correlate with top failures)
+
+Use this when root cause likely comes from infrastructure/service layer.
+
+## 5) Evidence export
+
+```bash
+npm run incident:packet -- --issue-id <issue-id> --out-dir ./artifacts
+```
+
+or
+
+```bash
+npm run incident:packet -- --run-id <run-id> --out-dir ./artifacts
+```
+
+Use exported JSON packet for incident archive or team handoff.

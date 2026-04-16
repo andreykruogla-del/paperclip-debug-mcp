@@ -7,6 +7,7 @@ import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
 import { buildIncidentPacket } from "../core/incident-packet.js";
+import { prioritizeIncidents } from "../core/incident-priority.js";
 import { PaperclipApiClient, firstString } from "../integrations/paperclip-client.js";
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
@@ -92,6 +93,52 @@ export function createMcpServer(): McpServer {
             type: "text",
             text: JSON.stringify(
               { totalIncidents: incidents.length, totalClusters: clusters.length, clusters },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.prioritize_incidents",
+    {
+      title: "Prioritize incidents",
+      description: "Ranks incidents by severity, recency, and likely operational impact.",
+      inputSchema: {
+        limit: z.number().int().positive().max(500).optional(),
+        minBand: z.enum(["low", "medium", "high", "critical"]).optional()
+      }
+    },
+    async ({ limit, minBand }) => {
+      const incidents = await registry.collectAllIncidents();
+      const prioritized = prioritizeIncidents(incidents, limit ?? 100);
+      const bandRank: Record<"low" | "medium" | "high" | "critical", number> = {
+        low: 0,
+        medium: 1,
+        high: 2,
+        critical: 3
+      };
+      const filtered = minBand
+        ? prioritized.filter((incident) => bandRank[incident.priorityBand] >= bandRank[minBand])
+        : prioritized;
+      return {
+        structuredContent: {
+          totalIncidents: incidents.length,
+          returnedIncidents: filtered.length,
+          incidents: filtered
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                totalIncidents: incidents.length,
+                returnedIncidents: filtered.length,
+                incidents: filtered
+              },
               null,
               2
             )
@@ -443,6 +490,71 @@ export function createMcpServer(): McpServer {
             )
           }
         ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.system_snapshot",
+    {
+      title: "System snapshot",
+      description:
+        "Returns one high-level snapshot of collectors, incidents, services, runs, and issues.",
+      inputSchema: {
+        runLimit: z.number().int().positive().max(100).optional(),
+        issueLimit: z.number().int().positive().max(100).optional()
+      }
+    },
+    async ({ runLimit, issueLimit }) => {
+      const collectors = registry.listStatuses();
+      const incidents = await registry.collectAllIncidents();
+      const prioritized = prioritizeIncidents(incidents, 20);
+      const services = await listDockerServices();
+
+      let runs: Awaited<ReturnType<typeof listRuns>>["runs"] = [];
+      let issues: Awaited<ReturnType<typeof listIssues>>["issues"] = [];
+      let paperclipError: string | undefined;
+
+      if (paperclipClient.isEnabled()) {
+        try {
+          runs = (await listRuns(paperclipClient, runLimit ?? 20)).runs;
+          if (paperclipCompanyId) {
+            issues = (await listIssues(
+              paperclipClient,
+              paperclipCompanyId,
+              paperclipProjectId,
+              issueLimit ?? 20,
+              undefined
+            )).issues;
+          }
+        } catch (error: unknown) {
+          paperclipError = error instanceof Error ? error.message : String(error);
+        }
+      } else {
+        paperclipError = "Paperclip API is not configured.";
+      }
+
+      const payload = {
+        generatedAt: Date.now(),
+        collectors,
+        summary: {
+          incidents: incidents.length,
+          criticalOrHigh: prioritized.filter((item) => item.priorityBand === "critical" || item.priorityBand === "high").length,
+          services: services.length,
+          problematicServices: services.filter((service) => service.problematic).length,
+          runs: runs.length,
+          issues: issues.length
+        },
+        topIncidents: prioritized.slice(0, 10),
+        services,
+        runs,
+        issues,
+        paperclipError
+      };
+
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
       };
     }
   );

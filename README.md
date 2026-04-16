@@ -87,6 +87,7 @@ Start from [`.env.example`](.env.example).
 - `paperclipDebug.list_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
+- `paperclipDebug.prioritize_incidents`
 - `paperclipDebug.trace_handoff`
 - `paperclipDebug.list_runs`
 - `paperclipDebug.get_run_events`
@@ -95,6 +96,7 @@ Start from [`.env.example`](.env.example).
 - `paperclipDebug.list_services`
 - `paperclipDebug.get_service_logs`
 - `paperclipDebug.build_incident_packet`
+- `paperclipDebug.system_snapshot`
 
 ## What Makes It Different
 
@@ -113,7 +115,20 @@ Current scope:
 - Paperclip API collector (issues/comments/runs/events)
 - Docker collector (services + logs)
 - Incident clustering and handoff trace
+- Incident prioritization and system snapshot
 - Incident packet builder and CLI export
+
+## Quality Gates
+
+```bash
+npm run check
+npm run build
+npm run test
+```
+
+## Playbook
+
+See [docs/mcp-playbook.md](docs/mcp-playbook.md) for ready diagnostic call sequences.
 
 ## Works only with one stack?
 

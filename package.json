@@ -9,7 +9,8 @@
     "mcp:stdio": "tsx scripts/mcp-stdio.ts",
     "check": "npx tsc -p tsconfig.json --noEmit",
     "smoke:live": "tsx scripts/smoke-live.ts",
-    "incident:packet": "tsx scripts/build-incident-packet.ts"
+    "incident:packet": "tsx scripts/build-incident-packet.ts",
+    "test": "vitest run"
   },
   "keywords": [
     "paperclip",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@types/node": "^24.7.2",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.4"
   }
 }
