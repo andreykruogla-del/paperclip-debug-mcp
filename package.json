@@ -11,6 +11,7 @@
     "mcp:http": "tsx scripts/mcp-http.ts",
     "check": "npx tsc -p tsconfig.json --noEmit",
     "smoke:live": "tsx scripts/smoke-live.ts",
+    "doctor": "tsx scripts/doctor.ts",
     "incident:packet": "tsx scripts/build-incident-packet.ts",
     "benchmark:report": "tsx scripts/benchmark-report.ts",
     "collector:new": "tsx scripts/new-collector.ts",

@@ -56,6 +56,7 @@ Keep at least 10 incidents per environment to get stable numbers.
 ```bash
 npm install
 cp .env.example .env
+npm run doctor
 npm run smoke:live
 npm run mcp:stdio
 npm run mcp:http
