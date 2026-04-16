@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { redactSensitiveText } from "../core/redaction.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -68,4 +69,28 @@ export async function listDockerServices(): Promise<DockerServiceStatus[]> {
   return services.sort(
     (a, b) => Number(b.problematic) - Number(a.problematic) || a.name.localeCompare(b.name)
   );
+}
+
+export async function getDockerServiceLogs(
+  serviceIdOrName: string,
+  tail = 200
+): Promise<{ service: string; tail: number; logs: string }> {
+  const service = serviceIdOrName.trim();
+  const safeTail = Math.max(1, Math.min(5000, Math.floor(tail)));
+  const { stdout, stderr } = await execFileAsync(
+    "docker",
+    ["logs", "--tail", String(safeTail), service],
+    { timeout: 12000, windowsHide: true, maxBuffer: 10 * 1024 * 1024 }
+  );
+
+  const merged = [stdout ?? "", stderr ?? ""]
+    .filter((part) => part.length > 0)
+    .join("\n")
+    .trim();
+
+  return {
+    service,
+    tail: safeTail,
+    logs: redactSensitiveText(merged) ?? ""
+  };
 }

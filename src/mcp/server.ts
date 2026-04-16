@@ -6,15 +6,19 @@ import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js"
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
-import { PaperclipApiClient } from "../integrations/paperclip-client.js";
+import { buildIncidentPacket } from "../core/incident-packet.js";
+import { PaperclipApiClient, firstString } from "../integrations/paperclip-client.js";
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
-import { listDockerServices } from "../integrations/docker-services.js";
+import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
+import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
 
 export function createMcpServer(): McpServer {
   const registry = new CollectorRegistry();
   registry.register(new PaperclipApiCollector());
   registry.register(new DockerCliCollector());
   const paperclipClient = new PaperclipApiClient();
+  const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
+  const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);
 
   const server = new McpServer(
     {
@@ -179,6 +183,71 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "paperclipDebug.list_issues",
+    {
+      title: "List issues",
+      description: "Returns recent Paperclip issues for the configured company/project.",
+      inputSchema: {
+        limit: z.number().int().positive().max(200).optional(),
+        status: z.string().min(1).optional()
+      }
+    },
+    async ({ limit, status }) => {
+      if (!paperclipClient.isEnabled()) {
+        return {
+          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
+          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
+        };
+      }
+      if (!paperclipCompanyId) {
+        return {
+          structuredContent: { error: "PAPERCLIP_COMPANY_ID is required for list_issues." },
+          content: [{ type: "text", text: "PAPERCLIP_COMPANY_ID is required for list_issues." }]
+        };
+      }
+
+      const { issues, sourcePath } = await listIssues(
+        paperclipClient,
+        paperclipCompanyId,
+        paperclipProjectId,
+        limit ?? 30,
+        status
+      );
+      return {
+        structuredContent: { sourcePath, totalIssues: issues.length, issues },
+        content: [{ type: "text", text: JSON.stringify({ sourcePath, totalIssues: issues.length, issues }, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.get_issue_comments",
+    {
+      title: "Get issue comments",
+      description: "Returns ordered comments for one issue id.",
+      inputSchema: {
+        issueId: z.string().min(1),
+        limit: z.number().int().positive().max(2000).optional()
+      }
+    },
+    async ({ issueId, limit }) => {
+      if (!paperclipClient.isEnabled()) {
+        return {
+          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
+          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
+        };
+      }
+
+      const { comments, sourcePath } = await getIssueComments(paperclipClient, issueId);
+      const cut = comments.slice(0, limit ?? 300);
+      return {
+        structuredContent: { issueId, sourcePath, totalComments: comments.length, comments: cut },
+        content: [{ type: "text", text: JSON.stringify({ issueId, sourcePath, totalComments: comments.length, comments: cut }, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
     "paperclipDebug.get_run_events",
     {
       title: "Get run events",
@@ -250,6 +319,124 @@ export function createMcpServer(): McpServer {
                 returnedServices: filtered.length,
                 problematicServices: services.filter((service) => service.problematic).length,
                 services: filtered
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.get_service_logs",
+    {
+      title: "Get service logs",
+      description: "Returns redacted Docker logs for one container/service id or name.",
+      inputSchema: {
+        service: z.string().min(1),
+        tail: z.number().int().positive().max(5000).optional()
+      }
+    },
+    async ({ service, tail }) => {
+      const result = await getDockerServiceLogs(service, tail ?? 200);
+      return {
+        structuredContent: result,
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.build_incident_packet",
+    {
+      title: "Build incident packet",
+      description:
+        "Builds one evidence packet for investigation: issue, comments, run summary, run events, incidents, clusters.",
+      inputSchema: {
+        issueId: z.string().min(1).optional(),
+        runId: z.string().min(1).optional(),
+        runEventLimit: z.number().int().positive().max(5000).optional(),
+        incidentLimit: z.number().int().positive().max(2000).optional()
+      }
+    },
+    async ({ issueId, runId, runEventLimit, incidentLimit }) => {
+      if (!paperclipClient.isEnabled()) {
+        return {
+          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
+          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
+        };
+      }
+      if (!issueId && !runId) {
+        return {
+          structuredContent: { error: "Provide at least one: issueId or runId." },
+          content: [{ type: "text", text: "Provide at least one: issueId or runId." }]
+        };
+      }
+
+      const allIncidents = (await registry.collectAllIncidents()).slice(0, incidentLimit ?? 500);
+      let resolvedIssueId = issueId;
+      let resolvedRunId = runId;
+      let issueData: Awaited<ReturnType<typeof listIssues>>["issues"][number] | undefined;
+      let commentsData: Awaited<ReturnType<typeof getIssueComments>>["comments"] | undefined;
+      let runSummary: Awaited<ReturnType<typeof listRuns>>["runs"][number] | undefined;
+      let runEvents: Awaited<ReturnType<typeof getRunEvents>>["events"] | undefined;
+
+      if (resolvedIssueId && paperclipCompanyId) {
+        const { issues } = await listIssues(paperclipClient, paperclipCompanyId, paperclipProjectId, 100, undefined);
+        issueData = issues.find((issue) => issue.issueId === resolvedIssueId);
+        const commentsResult = await getIssueComments(paperclipClient, resolvedIssueId);
+        commentsData = commentsResult.comments;
+        resolvedRunId = resolvedRunId ?? issueData?.relatedRunId;
+      }
+
+      if (resolvedRunId) {
+        const { runs } = await listRuns(paperclipClient, 200);
+        runSummary = runs.find((run) => run.runId === resolvedRunId);
+        const eventsResult = await getRunEvents(paperclipClient, resolvedRunId);
+        runEvents = eventsResult.events.slice(0, runEventLimit ?? 1000);
+      }
+
+      const packet = buildIncidentPacket({
+        issue: issueData,
+        comments: commentsData,
+        run: runSummary,
+        runEvents,
+        allIncidents
+      });
+
+      return {
+        structuredContent: {
+          packet,
+          summary: {
+            issueId: packet.issue?.issueId,
+            runId: packet.run?.runId ?? packet.issue?.relatedRunId,
+            comments: packet.comments?.length ?? 0,
+            runEvents: packet.runEvents?.length ?? 0,
+            relatedIncidents: packet.relatedIncidents.length,
+            clusters: packet.clusters.length
+          }
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                packet,
+                summary: {
+                  issueId: packet.issue?.issueId,
+                  runId: packet.run?.runId ?? packet.issue?.relatedRunId,
+                  comments: packet.comments?.length ?? 0,
+                  runEvents: packet.runEvents?.length ?? 0,
+                  relatedIncidents: packet.relatedIncidents.length,
+                  clusters: packet.clusters.length
+                }
               },
               null,
               2

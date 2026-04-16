@@ -1,6 +1,8 @@
+import "dotenv/config";
 import { PaperclipApiClient } from "../src/integrations/paperclip-client.js";
 import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
+import { listIssues } from "../src/integrations/paperclip-issues.js";
 
 async function main(): Promise<void> {
   const paperclipClient = new PaperclipApiClient();
@@ -16,14 +18,43 @@ async function main(): Promise<void> {
         sourcePath,
         runs: runs.length
       };
+
+      const companyId = process.env.PAPERCLIP_COMPANY_ID;
+      if (companyId) {
+        const issueResult = await listIssues(
+          paperclipClient,
+          companyId,
+          process.env.PAPERCLIP_PROJECT_ID,
+          5,
+          undefined
+        );
+        report.paperclipIssues = {
+          status: "ok",
+          sourcePath: issueResult.sourcePath,
+          issues: issueResult.issues.length
+        };
+      } else {
+        report.paperclipIssues = {
+          status: "skipped",
+          reason: "PAPERCLIP_COMPANY_ID is not set"
+        };
+      }
     } catch (error: unknown) {
       report.paperclip = {
         status: "error",
         error: error instanceof Error ? error.message : String(error)
       };
+      report.paperclipIssues = {
+        status: "skipped",
+        reason: "Paperclip run check failed"
+      };
     }
   } else {
     report.paperclip = {
+      status: "skipped",
+      reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set"
+    };
+    report.paperclipIssues = {
       status: "skipped",
       reason: "PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN are not set"
     };

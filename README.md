@@ -17,11 +17,13 @@ This project exposes a stable MCP tool surface for incident triage:
 - deduplicated incident clusters
 
 Goal: reduce `time-to-root-cause` and `tokens-per-incident`.
+Sensitive token-like strings are redacted in collector/event/comment excerpts.
 
 ## 60-second start
 
 ```bash
 npm install
+cp .env.example .env
 npm run mcp:stdio
 npm run smoke:live
 ```
@@ -32,15 +34,19 @@ Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:
 - `paperclipDebug.list_incident_clusters`
 - `paperclipDebug.trace_handoff`
 - `paperclipDebug.list_runs`
+- `paperclipDebug.list_issues`
+- `paperclipDebug.get_issue_comments`
 - `paperclipDebug.get_run_events`
 - `paperclipDebug.list_services`
+- `paperclipDebug.get_service_logs`
+- `paperclipDebug.build_incident_packet`
 
 ## Live collector config
 
 Set env vars before running:
 
 ```bash
-PAPERCLIP_BASE_URL=https://paperclip.simfi-mebel.ru
+PAPERCLIP_BASE_URL=https://paperclip.example.com
 PAPERCLIP_TOKEN=...
 PAPERCLIP_COMPANY_ID=...
 PAPERCLIP_PROJECT_ID=...         # optional
@@ -57,7 +63,10 @@ Collector behavior:
 
 Run/event behavior:
 - `list_runs`: tries Paperclip endpoints (`/api/runs`, `/api/run-logs`) and returns normalized run summaries
+- `list_issues`: returns normalized issue summaries for configured `PAPERCLIP_COMPANY_ID`
+- `get_issue_comments`: returns redacted comments ordered by creation time
 - `get_run_events`: fetches events for a run id (`/api/runs/:id/events` with fallbacks)
+- `build_incident_packet`: builds one evidence packet (issue + comments + run + run events + incidents + clusters)
 
 ## Current scope (v0)
 

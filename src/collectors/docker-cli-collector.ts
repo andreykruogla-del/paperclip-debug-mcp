@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 
 import type { IncidentCollector } from "../core/collector-interface.js";
 import type { Incident, IncidentSeverity } from "../core/types.js";
+import { redactSensitiveText } from "../core/redaction.js";
 import { listDockerServices } from "../integrations/docker-services.js";
 
 const execFileAsync = promisify(execFile);
@@ -70,7 +71,7 @@ export class DockerCliCollector implements IncidentCollector {
       timestamp: now(),
       summary: `Container ${name} in problematic state: ${status}`,
       probableCause: probableCauseFromLog(logExcerpt),
-      rawExcerpt: logExcerpt
+      rawExcerpt: redactSensitiveText(logExcerpt)
     };
   }
 
@@ -83,7 +84,7 @@ export class DockerCliCollector implements IncidentCollector {
         .filter((line) => line.length > 0);
       return lines.slice(-6).join("\n").slice(0, 2000);
     } catch (error: unknown) {
-      return `Cannot read docker logs: ${error instanceof Error ? error.message : String(error)}`;
+      return redactSensitiveText(`Cannot read docker logs: ${error instanceof Error ? error.message : String(error)}`) ?? "Cannot read docker logs";
     }
   }
 }

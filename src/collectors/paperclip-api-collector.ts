@@ -1,5 +1,6 @@
 import type { IncidentCollector } from "../core/collector-interface.js";
 import type { Incident, IncidentSeverity } from "../core/types.js";
+import { redactSensitiveText } from "../core/redaction.js";
 import {
   PaperclipApiClient,
   firstString,
@@ -111,7 +112,7 @@ export class PaperclipApiCollector implements IncidentCollector {
         summary: `${title} [${status}]`,
         probableCause: probableCauseFromText(issue.description, latestComment?.body),
         relatedRunId: firstString(issue.runId),
-        rawExcerpt: firstString(latestComment?.body) ?? firstString(issue.description)
+        rawExcerpt: redactSensitiveText(firstString(latestComment?.body) ?? firstString(issue.description))
       });
     }
 

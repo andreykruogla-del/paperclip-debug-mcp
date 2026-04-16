@@ -1,4 +1,5 @@
 import { PaperclipApiClient, firstString, toTimestamp } from "./paperclip-client.js";
+import { redactSensitiveText } from "../core/redaction.js";
 
 export type PaperclipRunSummary = {
   runId: string;
@@ -107,7 +108,7 @@ function mapEvent(runId: string, event: EventShape, sourcePath: string, idx: num
       "unknown",
     level: firstString(event.level),
     message: firstString(event.message) ?? firstString(event.summary),
-    error: firstString(event.error),
+    error: redactSensitiveText(firstString(event.error)),
     tokens:
       typeof event.tokens === "number"
         ? event.tokens
@@ -138,6 +139,10 @@ export async function listRuns(
   const mapped = rows
     .map((row) => mapRun(row, path))
     .filter((row): row is PaperclipRunSummary => Boolean(row))
+    .map((row) => ({
+      ...row,
+      error: redactSensitiveText(row.error)
+    }))
     .sort((a, b) => b.startedAt - a.startedAt);
   return { runs: mapped, sourcePath: path };
 }
