@@ -48,6 +48,17 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
 Use this when your pipeline depends on WordPress (catalog updates/media flows).
 If auth fields are omitted, collector still validates public REST + XML-RPC surface.
 
+## 5) Add Caddy reverse-proxy checks
+
+```bash
+CADDY_COLLECTOR_ENABLED=true
+CADDY_HEALTH_URL=https://paperclip.example.com/healthz
+CADDY_LOG_PATH=/var/log/caddy/error.log
+CADDY_LOG_TAIL_LINES=300
+```
+
+Use this when your stack depends on Caddy and you need fast proxy-layer diagnostics.
+
 ## Verification sequence
 
 After changing profile:
@@ -57,6 +68,7 @@ After changing profile:
 3. Call:
    - `paperclipDebug.get_runtime_config`
    - `paperclipDebug.list_collectors`
+   - `paperclipDebug.caddy_health`
    - `paperclipDebug.wordpress_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

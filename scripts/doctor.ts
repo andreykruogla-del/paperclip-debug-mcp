@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { CaddyHealthCollector } from "../src/collectors/caddy-health-collector.js";
 import { DockerCliCollector } from "../src/collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../src/collectors/filesystem-log-collector.js";
 import { PaperclipApiCollector } from "../src/collectors/paperclip-api-collector.js";
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
     })
   );
   registry.register(new DockerCliCollector(40, runtimeConfig.enableDockerCollector));
+  registry.register(new CaddyHealthCollector({ enabled: runtimeConfig.enableCaddyCollector }));
   registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,

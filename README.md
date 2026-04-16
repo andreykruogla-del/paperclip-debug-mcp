@@ -101,6 +101,11 @@ WORDPRESS_BASE_URL=              # e.g. https://site.example.com
 WORDPRESS_USERNAME=              # optional for auth check
 WORDPRESS_APP_PASSWORD=          # optional for auth check
 
+CADDY_COLLECTOR_ENABLED=false
+CADDY_HEALTH_URL=                # e.g. https://paperclip.example.com/healthz
+CADDY_LOG_PATH=                  # optional caddy log path
+CADDY_LOG_TAIL_LINES=200
+
 # Future optional adapters (template)
 # K8S_COLLECTOR_ENABLED=false
 # K8S_NAMESPACE=
@@ -108,8 +113,6 @@ WORDPRESS_APP_PASSWORD=          # optional for auth check
 # POSTGRES_URL=
 # REDIS_COLLECTOR_ENABLED=false
 # REDIS_URL=
-# CADDY_COLLECTOR_ENABLED=false
-# CADDY_LOG_PATH=
 # SENTRY_COLLECTOR_ENABLED=false
 # SENTRY_DSN=
 ```
@@ -142,6 +145,7 @@ When adding any new optional adapter, update both:
 ## Optional Adapter Tools
 
 - `paperclipDebug.wordpress_health`
+- `paperclipDebug.caddy_health`
 
 ## Transport Modes
 
@@ -172,6 +176,7 @@ Current scope:
 - Docker collector (services + logs)
 - Filesystem log collector (host log files via configured paths)
 - Optional WordPress health collector (REST availability, XML-RPC, auth check)
+- Optional Caddy health collector (health endpoint and proxy log diagnostics)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export

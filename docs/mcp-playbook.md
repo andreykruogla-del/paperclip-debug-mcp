@@ -49,6 +49,14 @@ Use this when root cause likely comes from infrastructure/service layer.
 
 Use this when ingestion/update flow depends on WordPress API availability.
 
+## 4c) Caddy reverse-proxy path
+
+1. `paperclipDebug.caddy_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when ingress/HTTPS/proxy behavior is suspicious.
+
 ## 5) Evidence export
 
 ```bash

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+import { CaddyHealthCollector } from "../collectors/caddy-health-collector.js";
 import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
@@ -16,6 +17,7 @@ import { PaperclipApiClient, firstString } from "../integrations/paperclip-clien
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
+import { CaddyClient } from "../integrations/caddy-client.js";
 import { WordPressClient } from "../integrations/wordpress-client.js";
 
 export function createMcpServer(): McpServer {
@@ -29,6 +31,11 @@ export function createMcpServer(): McpServer {
   );
   registry.register(new DockerCliCollector(40, runtimeConfig.enableDockerCollector));
   registry.register(
+    new CaddyHealthCollector({
+      enabled: runtimeConfig.enableCaddyCollector
+    })
+  );
+  registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,
       maxLines: runtimeConfig.fileCollectorMaxLines,
@@ -41,6 +48,7 @@ export function createMcpServer(): McpServer {
     })
   );
   const paperclipClient = new PaperclipApiClient();
+  const caddyClient = new CaddyClient();
   const wordpressClient = new WordPressClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
   const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);
@@ -82,6 +90,32 @@ export function createMcpServer(): McpServer {
       return {
         structuredContent: { collectors },
         content: [{ type: "text", text: JSON.stringify({ collectors }, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.caddy_health",
+    {
+      title: "Caddy health check",
+      description: "Runs Caddy endpoint and optional log-file checks.",
+      inputSchema: {}
+    },
+    async () => {
+      if (!caddyClient.isEnabled()) {
+        const payload = {
+          configured: false,
+          error: "Caddy is not configured. Set CADDY_HEALTH_URL or CADDY_LOG_PATH."
+        };
+        return {
+          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+        };
+      }
+      const payload = await caddyClient.checkHealth();
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
       };
     }
   );

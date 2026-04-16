@@ -3,6 +3,7 @@ export type RuntimeConfig = {
   enableDockerCollector: boolean;
   enableFileCollector: boolean;
   enableWordpressCollector: boolean;
+  enableCaddyCollector: boolean;
   fileCollectorPathsCount: number;
   fileCollectorMaxLines: number;
   fileCollectorPattern: string;
@@ -14,6 +15,8 @@ export type RuntimeConfig = {
   hasPaperclipProjectId: boolean;
   hasWordpressBaseUrl: boolean;
   hasWordpressAuth: boolean;
+  hasCaddyHealthUrl: boolean;
+  hasCaddyLogPath: boolean;
   paperclipMaxIssues: number;
 };
 
@@ -43,6 +46,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     enableDockerCollector: parseBoolean(env.DOCKER_COLLECTOR_ENABLED, true),
     enableFileCollector: parseBoolean(env.FILE_COLLECTOR_ENABLED, false),
     enableWordpressCollector: parseBoolean(env.WORDPRESS_COLLECTOR_ENABLED, false),
+    enableCaddyCollector: parseBoolean(env.CADDY_COLLECTOR_ENABLED, false),
     fileCollectorPathsCount: fileCollectorPaths.length,
     fileCollectorMaxLines: Math.min(parsePositiveInt(env.FILE_COLLECTOR_MAX_LINES, 300), 5000),
     fileCollectorPattern,
@@ -59,6 +63,8 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
         env.WORDPRESS_APP_PASSWORD &&
         env.WORDPRESS_APP_PASSWORD.trim().length > 0
     ),
+    hasCaddyHealthUrl: Boolean(env.CADDY_HEALTH_URL && env.CADDY_HEALTH_URL.trim().length > 0),
+    hasCaddyLogPath: Boolean(env.CADDY_LOG_PATH && env.CADDY_LOG_PATH.trim().length > 0),
     paperclipMaxIssues: Math.min(parsePositiveInt(env.PAPERCLIP_MAX_ISSUES, 25), 200)
   };
 }

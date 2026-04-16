@@ -3,6 +3,7 @@ import { PaperclipApiClient } from "../src/integrations/paperclip-client.js";
 import { listRuns } from "../src/integrations/paperclip-runs.js";
 import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
+import { CaddyClient } from "../src/integrations/caddy-client.js";
 import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
 async function main(): Promise<void> {
@@ -10,6 +11,7 @@ async function main(): Promise<void> {
   const report: Record<string, unknown> = {
     at: new Date().toISOString()
   };
+  const caddyClient = new CaddyClient();
   const wordpressClient = new WordPressClient();
 
   if (paperclipClient.isEnabled()) {
@@ -73,6 +75,28 @@ async function main(): Promise<void> {
     report.docker = {
       status: "error",
       error: error instanceof Error ? error.message : String(error)
+    };
+  }
+
+  if (caddyClient.isEnabled()) {
+    try {
+      const health = await caddyClient.checkHealth();
+      report.caddy = {
+        status: health.reachable ? "ok" : "error",
+        reachable: health.reachable,
+        statusCode: health.statusCode,
+        logErrorCount: health.logErrorCount
+      };
+    } catch (error: unknown) {
+      report.caddy = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.caddy = {
+      status: "skipped",
+      reason: "CADDY_HEALTH_URL/CADDY_LOG_PATH are not set"
     };
   }
 
