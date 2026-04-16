@@ -83,9 +83,16 @@ Recommended quick path:
 
 This gives you a fast validation that collectors are active and incident data is queryable.
 
+What to expect from current triage-oriented outputs:
+
+- `paperclipDebug.system_snapshot` returns `summary`, `topSignals`, and `recommendedNextTools`.
+- `paperclipDebug.prioritize_incidents` returns ranked incidents plus `summary`, `topSignals`, and `recommendedNextTools`.
+- Adapter health tools return stable unconfigured payloads with `configured: false`, `reachable: false`, and `remediation` when setup is incomplete.
+
 ## What to Read Next
 
 - `docs/mcp-playbook.md` for investigation call sequences by scenario.
 - `docs/runtime-profiles.md` for ready `.env` profiles.
 - `docs/collector-adapter-guide.md` if you want to add a new adapter.
+- `docs/release-readiness-checklist.md` for a practical public-beta validation pass.
 - `README.md` for the project-level overview and tool map.

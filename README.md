@@ -15,6 +15,12 @@ Observed impact from internal tests (directional ranges, not guarantees):
 - Tokens per resolved incident: `-25% to -65%`
 - Time to build evidence packet: `-60% to -95%`
 
+What this project is not:
+
+- It is not a replacement for a full observability platform.
+- It is not a UI/dashboard product in this repository.
+- It is not a non-MCP primary interface.
+
 ## Unified Control Layer
 
 The core product idea is a single control layer with adapters, instead of a fragmented stack of standalone debugging utilities.
@@ -60,9 +66,13 @@ Configuration is environment-driven via `.env` (see `.env.example`). Key setting
 
 ## Documentation
 
+- [Getting Started](docs/getting-started.md): first-run setup and initial validation flow.
+- [Configuration](docs/configuration.md): environment variable reference and adapter configuration behavior.
+- [MCP Tools Reference](docs/mcp-tools-reference.md): current tool contracts and output-shape notes.
 - [MCP Playbook](docs/mcp-playbook.md): ready-to-run diagnostic call sequences.
 - [Runtime Profiles](docs/runtime-profiles.md): practical `.env` profiles for common runtime stacks.
 - [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
+- [Release Readiness Checklist](docs/release-readiness-checklist.md): lightweight public-beta release validation.
 
 ## MCP Tools
 
@@ -121,6 +131,12 @@ Current scope:
 - Optional ecosystem adapters: WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, Redis
 - Incident clustering, trends, prioritization, and handoff trace
 - Incident packet builder and CLI export
+
+## Public Beta Surface
+
+- `package.json` remains `private: true` for now to prevent accidental npm publication.
+- Version remains `0.1.0` until a dedicated packaging/publication decision is finalized.
+- Public-beta readiness is tracked with [docs/release-readiness-checklist.md](docs/release-readiness-checklist.md).
 
 ## Development
 

@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "description": "MCP-first debugging and incident intelligence layer for Paperclip agent systems",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andreykruogla-del/paperclip-debug-mcp.git"
+  },
+  "homepage": "https://github.com/andreykruogla-del/paperclip-debug-mcp",
+  "bugs": {
+    "url": "https://github.com/andreykruogla-del/paperclip-debug-mcp/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "clean": "tsx scripts/clean.ts",

@@ -7,6 +7,7 @@ This project is configured through environment variables loaded from `.env` (bas
 - Copy `.env.example` to `.env` and fill values for your environment.
 - Runtime behavior is controlled by collector flags and integration-specific variables.
 - Missing optional settings keep related adapters disabled or in limited mode.
+- Optional adapter health tools return explicit unconfigured payloads (`configured: false`, `reachable: false`, `error`, `remediation`) when required setup is missing.
 - Boolean flags accept common true/false forms (`true/false`, `1/0`, `yes/no`, `on/off`).
 - `FILE_COLLECTOR_PATHS` supports both `;` and `,` separators.
 
@@ -74,6 +75,7 @@ Only configure adapters you actually use.
 ### Kubernetes adapter
 
 - `K8S_NAMESPACE` (namespace diagnostics target)
+- `K8S_COLLECTOR_ENABLED` controls collector ingestion, while `paperclipDebug.k8s_health` diagnostics also depend on namespace availability.
 
 ### PostgreSQL adapter
 
@@ -87,6 +89,7 @@ Only configure adapters you actually use.
 
 - Start from `.env.example`; avoid creating ad hoc variable names.
 - Enable one optional adapter at a time during initial setup to simplify troubleshooting.
+- If an adapter health tool reports `configured: false`, apply the `remediation` hint first, then rerun the same tool before broader triage.
 - After configuration changes, run:
   - `npm run doctor`
   - `npm run smoke:live`
