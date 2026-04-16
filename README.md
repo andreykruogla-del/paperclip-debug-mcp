@@ -58,6 +58,7 @@ npm install
 cp .env.example .env
 npm run smoke:live
 npm run mcp:stdio
+npm run mcp:http
 ```
 
 Optional packet export:
@@ -78,6 +79,8 @@ PAPERCLIP_PROJECT_ID=...         # optional
 PAPERCLIP_ISSUE_IDS=...,...      # optional override
 PAPERCLIP_MAX_ISSUES=25          # optional
 DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
+MCP_HTTP_PORT=8787
+MCP_HTTP_AUTH_TOKEN=...          # optional bearer token for HTTP mode
 ```
 
 Start from [`.env.example`](.env.example).
@@ -97,6 +100,17 @@ Start from [`.env.example`](.env.example).
 - `paperclipDebug.get_service_logs`
 - `paperclipDebug.build_incident_packet`
 - `paperclipDebug.system_snapshot`
+
+## Transport Modes
+
+- `mcp:stdio`: local stdio mode for direct local MCP clients
+- `mcp:http`: streamable HTTP MCP server
+
+HTTP endpoints:
+- `POST /mcp`
+- `GET /mcp`
+- `DELETE /mcp`
+- `GET /healthz`
 
 ## What Makes It Different
 

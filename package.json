@@ -8,6 +8,7 @@
     "clean": "tsx scripts/clean.ts",
     "build": "npm run clean && npx tsc -p tsconfig.json",
     "mcp:stdio": "tsx scripts/mcp-stdio.ts",
+    "mcp:http": "tsx scripts/mcp-http.ts",
     "check": "npx tsc -p tsconfig.json --noEmit",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "incident:packet": "tsx scripts/build-incident-packet.ts",

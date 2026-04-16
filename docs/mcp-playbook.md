@@ -47,3 +47,21 @@ npm run incident:packet -- --run-id <run-id> --out-dir ./artifacts
 ```
 
 Use exported JSON packet for incident archive or team handoff.
+
+## 6) HTTP transport smoke
+
+```bash
+MCP_HTTP_PORT=8799 npm run mcp:http
+```
+
+Then check:
+
+```bash
+curl http://localhost:8799/healthz
+```
+
+If auth token is enabled, send:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:8799/healthz
+```
