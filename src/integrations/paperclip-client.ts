@@ -3,11 +3,73 @@ type PaperclipClientOptions = {
   token?: string;
 };
 
+export type PaperclipErrorCategory =
+  | "auth_failure"
+  | "endpoint_mismatch"
+  | "http_error"
+  | "connectivity_failure"
+  | "unknown";
+
 export type PaperclipConnection = {
   baseUrl: string;
   token: string;
   enabled: boolean;
 };
+
+type PaperclipApiErrorParams = {
+  category: PaperclipErrorCategory;
+  status?: number;
+  path?: string;
+  responseSnippet?: string;
+  attemptedPaths?: string[];
+  cause?: unknown;
+};
+
+export class PaperclipApiError extends Error {
+  public readonly category: PaperclipErrorCategory;
+  public readonly status?: number;
+  public readonly path?: string;
+  public readonly responseSnippet?: string;
+  public readonly attemptedPaths?: string[];
+
+  public constructor(message: string, params: PaperclipApiErrorParams) {
+    super(message);
+    this.name = "PaperclipApiError";
+    this.category = params.category;
+    this.status = params.status;
+    this.path = params.path;
+    this.responseSnippet = params.responseSnippet;
+    this.attemptedPaths = params.attemptedPaths;
+  }
+}
+
+export function classifyPaperclipError(error: unknown): {
+  category: PaperclipErrorCategory;
+  message: string;
+  status?: number;
+  path?: string;
+  attemptedPaths?: string[];
+} {
+  if (error instanceof PaperclipApiError) {
+    return {
+      category: error.category,
+      message: error.message,
+      status: error.status,
+      path: error.path,
+      attemptedPaths: error.attemptedPaths
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      category: "unknown",
+      message: error.message
+    };
+  }
+  return {
+    category: "unknown",
+    message: String(error)
+  };
+}
 
 export function parseCsv(value: string | undefined): string[] {
   if (!value) return [];
@@ -55,33 +117,72 @@ export class PaperclipApiClient {
   }
 
   public async get(path: string): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        "Content-Type": "application/json"
-      }
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json"
+        }
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PaperclipApiError(`Paperclip API connectivity failure for ${path}: ${message}`, {
+        category: "connectivity_failure",
+        path,
+        cause: error
+      });
+    }
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`Paperclip API ${response.status} for ${path}: ${body.slice(0, 240)}`);
+      const category: PaperclipErrorCategory =
+        response.status === 401 || response.status === 403
+          ? "auth_failure"
+          : response.status === 404
+            ? "endpoint_mismatch"
+            : "http_error";
+      throw new PaperclipApiError(`Paperclip API ${response.status} for ${path}: ${body.slice(0, 240)}`, {
+        category,
+        status: response.status,
+        path,
+        responseSnippet: body.slice(0, 240)
+      });
     }
 
     return response.json();
   }
 
   public async getFirst(paths: string[]): Promise<{ payload: unknown; path: string }> {
-    let lastError: string | undefined;
+    const errors: PaperclipApiError[] = [];
     for (const path of paths) {
       try {
         const payload = await this.get(path);
         return { payload, path };
       } catch (error: unknown) {
-        lastError = error instanceof Error ? error.message : String(error);
+        if (error instanceof PaperclipApiError) {
+          errors.push(error);
+        } else {
+          errors.push(
+            new PaperclipApiError(error instanceof Error ? error.message : String(error), {
+              category: "unknown",
+              path
+            })
+          );
+        }
       }
     }
-    throw new Error(lastError ?? "No working Paperclip endpoint variant found.");
+
+    const nonEndpointError = errors.find((error) => error.category !== "endpoint_mismatch");
+    if (nonEndpointError) {
+      throw nonEndpointError;
+    }
+
+    throw new PaperclipApiError("No working Paperclip endpoint variant found.", {
+      category: "endpoint_mismatch",
+      attemptedPaths: paths
+    });
   }
 
   public extractArray<T>(payload: unknown, preferredKeys?: string[]): T[] {

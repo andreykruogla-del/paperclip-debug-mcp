@@ -26,7 +26,11 @@ import {
   buildSystemSnapshotTriageGuidance,
   buildTraceHandoffTriageGuidance
 } from "../core/triage-guidance.js";
-import { PaperclipApiClient, firstString } from "../integrations/paperclip-client.js";
+import {
+  classifyPaperclipError,
+  PaperclipApiClient,
+  firstString
+} from "../integrations/paperclip-client.js";
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
@@ -41,6 +45,24 @@ type AdapterUnavailablePayload = {
   configured: false;
   reachable: false;
   error: string;
+  remediation: string;
+};
+
+type PaperclipToolErrorPayload = {
+  error: string;
+  errorType:
+    | "paperclip_not_configured"
+    | "paperclip_auth_failure"
+    | "paperclip_endpoint_mismatch"
+    | "paperclip_http_error"
+    | "paperclip_connectivity_failure"
+    | "paperclip_request_failure"
+    | "paperclip_missing_company_id";
+  source: "paperclip-api";
+  operation: string;
+  httpStatus?: number;
+  path?: string;
+  attemptedPaths?: string[];
   remediation: string;
 };
 
@@ -79,6 +101,60 @@ function adapterUnavailableOnError(params: {
     reachable: false,
     error: message,
     remediation: params.remediation
+  };
+}
+
+function paperclipNotConfiguredPayload(operation: string): PaperclipToolErrorPayload {
+  return {
+    error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN.",
+    errorType: "paperclip_not_configured",
+    source: "paperclip-api",
+    operation,
+    remediation: "Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN, then retry."
+  };
+}
+
+function paperclipMissingCompanyIdPayload(operation: string): PaperclipToolErrorPayload {
+  return {
+    error: "PAPERCLIP_COMPANY_ID is required for list_issues.",
+    errorType: "paperclip_missing_company_id",
+    source: "paperclip-api",
+    operation,
+    remediation: "Set PAPERCLIP_COMPANY_ID (and optional PAPERCLIP_PROJECT_ID), then retry."
+  };
+}
+
+function paperclipFailurePayload(operation: string, error: unknown): PaperclipToolErrorPayload {
+  const normalized = classifyPaperclipError(error);
+  const remediation =
+    normalized.category === "auth_failure"
+      ? "Verify PAPERCLIP_TOKEN validity and deployment permissions."
+      : normalized.category === "endpoint_mismatch"
+        ? "Verify PAPERCLIP_BASE_URL and endpoint compatibility for this deployment."
+        : normalized.category === "connectivity_failure"
+          ? "Verify Paperclip API reachability/network path and retry."
+          : "Verify Paperclip deployment availability and retry.";
+
+  const errorType: PaperclipToolErrorPayload["errorType"] =
+    normalized.category === "auth_failure"
+      ? "paperclip_auth_failure"
+      : normalized.category === "endpoint_mismatch"
+        ? "paperclip_endpoint_mismatch"
+        : normalized.category === "http_error"
+          ? "paperclip_http_error"
+          : normalized.category === "connectivity_failure"
+            ? "paperclip_connectivity_failure"
+            : "paperclip_request_failure";
+
+  return {
+    error: normalized.message,
+    errorType,
+    source: "paperclip-api",
+    operation,
+    httpStatus: normalized.status,
+    path: normalized.path,
+    attemptedPaths: normalized.attemptedPaths,
+    remediation
   };
 }
 
@@ -583,33 +659,27 @@ export function createMcpServer(): McpServer {
     },
     async ({ limit }) => {
       if (!paperclipClient.isEnabled()) {
+        return asToolResponse(paperclipNotConfiguredPayload("list_runs"));
+      }
+
+      try {
+        const { runs, sourcePath } = await listRuns(paperclipClient, limit ?? 20);
         return {
           structuredContent: {
-            error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+            sourcePath,
+            totalRuns: runs.length,
+            runs
           },
           content: [
             {
               type: "text",
-              text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+              text: JSON.stringify({ sourcePath, totalRuns: runs.length, runs }, null, 2)
             }
           ]
         };
+      } catch (error: unknown) {
+        return asToolResponse(paperclipFailurePayload("list_runs", error));
       }
-
-      const { runs, sourcePath } = await listRuns(paperclipClient, limit ?? 20);
-      return {
-        structuredContent: {
-          sourcePath,
-          totalRuns: runs.length,
-          runs
-        },
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ sourcePath, totalRuns: runs.length, runs }, null, 2)
-          }
-        ]
-      };
     }
   );
 
@@ -625,56 +695,54 @@ export function createMcpServer(): McpServer {
     },
     async ({ limit, status }) => {
       if (!paperclipClient.isEnabled()) {
-        return {
-          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
-          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
-        };
+        return asToolResponse(paperclipNotConfiguredPayload("list_issues"));
       }
       if (!paperclipCompanyId) {
-        return {
-          structuredContent: { error: "PAPERCLIP_COMPANY_ID is required for list_issues." },
-          content: [{ type: "text", text: "PAPERCLIP_COMPANY_ID is required for list_issues." }]
-        };
+        return asToolResponse(paperclipMissingCompanyIdPayload("list_issues"));
       }
 
-      const { issues, sourcePath } = await listIssues(
-        paperclipClient,
-        paperclipCompanyId,
-        paperclipProjectId,
-        limit ?? 30,
-        status
-      );
-      const issueGuidance = buildListIssuesTriageGuidance({
-        issues,
-        requestedStatus: status
-      });
-      return {
-        structuredContent: {
-          sourcePath,
-          totalIssues: issues.length,
+      try {
+        const { issues, sourcePath } = await listIssues(
+          paperclipClient,
+          paperclipCompanyId,
+          paperclipProjectId,
+          limit ?? 30,
+          status
+        );
+        const issueGuidance = buildListIssuesTriageGuidance({
           issues,
-          summary: issueGuidance.summary,
-          topSignals: issueGuidance.topSignals,
-          recommendedNextTools: issueGuidance.recommendedNextTools
-        },
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                sourcePath,
-                totalIssues: issues.length,
-                issues,
-                summary: issueGuidance.summary,
-                topSignals: issueGuidance.topSignals,
-                recommendedNextTools: issueGuidance.recommendedNextTools
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
+          requestedStatus: status
+        });
+        return {
+          structuredContent: {
+            sourcePath,
+            totalIssues: issues.length,
+            issues,
+            summary: issueGuidance.summary,
+            topSignals: issueGuidance.topSignals,
+            recommendedNextTools: issueGuidance.recommendedNextTools
+          },
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  sourcePath,
+                  totalIssues: issues.length,
+                  issues,
+                  summary: issueGuidance.summary,
+                  topSignals: issueGuidance.topSignals,
+                  recommendedNextTools: issueGuidance.recommendedNextTools
+                },
+                null,
+                2
+              )
+            }
+          ]
+        };
+      } catch (error: unknown) {
+        return asToolResponse(paperclipFailurePayload("list_issues", error));
+      }
     }
   );
 
@@ -690,47 +758,48 @@ export function createMcpServer(): McpServer {
     },
     async ({ issueId, limit }) => {
       if (!paperclipClient.isEnabled()) {
-        return {
-          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
-          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
-        };
+        return asToolResponse(paperclipNotConfiguredPayload("get_issue_comments"));
       }
 
-      const { comments, sourcePath } = await getIssueComments(paperclipClient, issueId);
-      const cut = comments.slice(0, limit ?? 300);
-      const commentGuidance = buildIssueCommentsTriageGuidance({
-        issueId,
-        comments: cut
-      });
-      return {
-        structuredContent: {
+      try {
+        const { comments, sourcePath } = await getIssueComments(paperclipClient, issueId);
+        const cut = comments.slice(0, limit ?? 300);
+        const commentGuidance = buildIssueCommentsTriageGuidance({
           issueId,
-          sourcePath,
-          totalComments: comments.length,
-          comments: cut,
-          summary: commentGuidance.summary,
-          topSignals: commentGuidance.topSignals,
-          recommendedNextTools: commentGuidance.recommendedNextTools
-        },
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                issueId,
-                sourcePath,
-                totalComments: comments.length,
-                comments: cut,
-                summary: commentGuidance.summary,
-                topSignals: commentGuidance.topSignals,
-                recommendedNextTools: commentGuidance.recommendedNextTools
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
+          comments: cut
+        });
+        return {
+          structuredContent: {
+            issueId,
+            sourcePath,
+            totalComments: comments.length,
+            comments: cut,
+            summary: commentGuidance.summary,
+            topSignals: commentGuidance.topSignals,
+            recommendedNextTools: commentGuidance.recommendedNextTools
+          },
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  issueId,
+                  sourcePath,
+                  totalComments: comments.length,
+                  comments: cut,
+                  summary: commentGuidance.summary,
+                  topSignals: commentGuidance.topSignals,
+                  recommendedNextTools: commentGuidance.recommendedNextTools
+                },
+                null,
+                2
+              )
+            }
+          ]
+        };
+      } catch (error: unknown) {
+        return asToolResponse(paperclipFailurePayload("get_issue_comments", error));
+      }
     }
   );
 
@@ -746,54 +815,48 @@ export function createMcpServer(): McpServer {
     },
     async ({ runId, limit }) => {
       if (!paperclipClient.isEnabled()) {
+        return asToolResponse(paperclipNotConfiguredPayload("get_run_events"));
+      }
+
+      try {
+        const { events, sourcePath } = await getRunEvents(paperclipClient, runId);
+        const cut = events.slice(0, limit ?? 1000);
+        const runGuidance = buildRunEventsTriageGuidance({
+          runId,
+          events: cut
+        });
         return {
           structuredContent: {
-            error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+            sourcePath,
+            runId,
+            totalEvents: events.length,
+            events: cut,
+            summary: runGuidance.summary,
+            topSignals: runGuidance.topSignals,
+            recommendedNextTools: runGuidance.recommendedNextTools
           },
           content: [
             {
               type: "text",
-              text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN."
+              text: JSON.stringify(
+                {
+                  sourcePath,
+                  runId,
+                  totalEvents: events.length,
+                  events: cut,
+                  summary: runGuidance.summary,
+                  topSignals: runGuidance.topSignals,
+                  recommendedNextTools: runGuidance.recommendedNextTools
+                },
+                null,
+                2
+              )
             }
           ]
         };
+      } catch (error: unknown) {
+        return asToolResponse(paperclipFailurePayload("get_run_events", error));
       }
-
-      const { events, sourcePath } = await getRunEvents(paperclipClient, runId);
-      const cut = events.slice(0, limit ?? 1000);
-      const runGuidance = buildRunEventsTriageGuidance({
-        runId,
-        events: cut
-      });
-      return {
-        structuredContent: {
-          sourcePath,
-          runId,
-          totalEvents: events.length,
-          events: cut,
-          summary: runGuidance.summary,
-          topSignals: runGuidance.topSignals,
-          recommendedNextTools: runGuidance.recommendedNextTools
-        },
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                sourcePath,
-                runId,
-                totalEvents: events.length,
-                events: cut,
-                summary: runGuidance.summary,
-                topSignals: runGuidance.topSignals,
-                recommendedNextTools: runGuidance.recommendedNextTools
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
     }
   );
 
@@ -874,10 +937,7 @@ export function createMcpServer(): McpServer {
     },
     async ({ issueId, runId, runEventLimit, incidentLimit }) => {
       if (!paperclipClient.isEnabled()) {
-        return {
-          structuredContent: { error: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." },
-          content: [{ type: "text", text: "Paperclip API is not configured. Set PAPERCLIP_BASE_URL and PAPERCLIP_TOKEN." }]
-        };
+        return asToolResponse(paperclipNotConfiguredPayload("build_incident_packet"));
       }
       if (!issueId && !runId) {
         return {
@@ -886,79 +946,83 @@ export function createMcpServer(): McpServer {
         };
       }
 
-      const allIncidents = (await registry.collectAllIncidents()).slice(0, incidentLimit ?? 500);
-      let resolvedIssueId = issueId;
-      let resolvedRunId = runId;
-      let issueData: Awaited<ReturnType<typeof listIssues>>["issues"][number] | undefined;
-      let commentsData: Awaited<ReturnType<typeof getIssueComments>>["comments"] | undefined;
-      let runSummary: Awaited<ReturnType<typeof listRuns>>["runs"][number] | undefined;
-      let runEvents: Awaited<ReturnType<typeof getRunEvents>>["events"] | undefined;
+      try {
+        const allIncidents = (await registry.collectAllIncidents()).slice(0, incidentLimit ?? 500);
+        let resolvedIssueId = issueId;
+        let resolvedRunId = runId;
+        let issueData: Awaited<ReturnType<typeof listIssues>>["issues"][number] | undefined;
+        let commentsData: Awaited<ReturnType<typeof getIssueComments>>["comments"] | undefined;
+        let runSummary: Awaited<ReturnType<typeof listRuns>>["runs"][number] | undefined;
+        let runEvents: Awaited<ReturnType<typeof getRunEvents>>["events"] | undefined;
 
-      if (resolvedIssueId && paperclipCompanyId) {
-        const { issues } = await listIssues(paperclipClient, paperclipCompanyId, paperclipProjectId, 100, undefined);
-        issueData = issues.find((issue) => issue.issueId === resolvedIssueId);
-        const commentsResult = await getIssueComments(paperclipClient, resolvedIssueId);
-        commentsData = commentsResult.comments;
-        resolvedRunId = resolvedRunId ?? issueData?.relatedRunId;
-      }
+        if (resolvedIssueId && paperclipCompanyId) {
+          const { issues } = await listIssues(paperclipClient, paperclipCompanyId, paperclipProjectId, 100, undefined);
+          issueData = issues.find((issue) => issue.issueId === resolvedIssueId);
+          const commentsResult = await getIssueComments(paperclipClient, resolvedIssueId);
+          commentsData = commentsResult.comments;
+          resolvedRunId = resolvedRunId ?? issueData?.relatedRunId;
+        }
 
-      if (resolvedRunId) {
-        const { runs } = await listRuns(paperclipClient, 200);
-        runSummary = runs.find((run) => run.runId === resolvedRunId);
-        const eventsResult = await getRunEvents(paperclipClient, resolvedRunId);
-        runEvents = eventsResult.events.slice(0, runEventLimit ?? 1000);
-      }
+        if (resolvedRunId) {
+          const { runs } = await listRuns(paperclipClient, 200);
+          runSummary = runs.find((run) => run.runId === resolvedRunId);
+          const eventsResult = await getRunEvents(paperclipClient, resolvedRunId);
+          runEvents = eventsResult.events.slice(0, runEventLimit ?? 1000);
+        }
 
-      const packet = buildIncidentPacket({
-        issue: issueData,
-        comments: commentsData,
-        run: runSummary,
-        runEvents,
-        allIncidents
-      });
-      const packetGuidance = buildIncidentPacketGuidance({ packet });
+        const packet = buildIncidentPacket({
+          issue: issueData,
+          comments: commentsData,
+          run: runSummary,
+          runEvents,
+          allIncidents
+        });
+        const packetGuidance = buildIncidentPacketGuidance({ packet });
 
-      return {
-        structuredContent: {
-          packet,
-          summary: {
-            issueId: packet.issue?.issueId,
-            runId: packet.run?.runId ?? packet.issue?.relatedRunId,
-            comments: packet.comments?.length ?? 0,
-            runEvents: packet.runEvents?.length ?? 0,
-            relatedIncidents: packet.relatedIncidents.length,
-            clusters: packet.clusters.length
+        return {
+          structuredContent: {
+            packet,
+            summary: {
+              issueId: packet.issue?.issueId,
+              runId: packet.run?.runId ?? packet.issue?.relatedRunId,
+              comments: packet.comments?.length ?? 0,
+              runEvents: packet.runEvents?.length ?? 0,
+              relatedIncidents: packet.relatedIncidents.length,
+              clusters: packet.clusters.length
+            },
+            topSignals: packetGuidance.topSignals,
+            recommendedNextTools: packetGuidance.recommendedNextTools,
+            packetReadiness: packetGuidance.packetReadiness,
+            correlationHints: packetGuidance.correlationHints
           },
-          topSignals: packetGuidance.topSignals,
-          recommendedNextTools: packetGuidance.recommendedNextTools,
-          packetReadiness: packetGuidance.packetReadiness,
-          correlationHints: packetGuidance.correlationHints
-        },
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                packet,
-                summary: {
-                  issueId: packet.issue?.issueId,
-                  runId: packet.run?.runId ?? packet.issue?.relatedRunId,
-                  comments: packet.comments?.length ?? 0,
-                  runEvents: packet.runEvents?.length ?? 0,
-                  relatedIncidents: packet.relatedIncidents.length,
-                  clusters: packet.clusters.length
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  packet,
+                  summary: {
+                    issueId: packet.issue?.issueId,
+                    runId: packet.run?.runId ?? packet.issue?.relatedRunId,
+                    comments: packet.comments?.length ?? 0,
+                    runEvents: packet.runEvents?.length ?? 0,
+                    relatedIncidents: packet.relatedIncidents.length,
+                    clusters: packet.clusters.length
+                  },
+                  topSignals: packetGuidance.topSignals,
+                  recommendedNextTools: packetGuidance.recommendedNextTools,
+                  packetReadiness: packetGuidance.packetReadiness,
+                  correlationHints: packetGuidance.correlationHints
                 },
-                topSignals: packetGuidance.topSignals,
-                recommendedNextTools: packetGuidance.recommendedNextTools,
-                packetReadiness: packetGuidance.packetReadiness,
-                correlationHints: packetGuidance.correlationHints
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
+                null,
+                2
+              )
+            }
+          ]
+        };
+      } catch (error: unknown) {
+        return asToolResponse(paperclipFailurePayload("build_incident_packet", error));
+      }
     }
   );
 

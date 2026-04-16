@@ -23,6 +23,7 @@ It is intentionally repository-focused and does not assume package publishing au
 - [ ] `npm run doctor`
 - [ ] `npm run smoke:live`
 - [ ] Verify no blocking config errors in baseline flow.
+- [ ] Confirm Paperclip preflight classification is explicit (`auth_failure`, `endpoint_mismatch`, `connectivity_failure`, or clear `not_configured`).
 - [ ] If adapter tools are tested, verify unconfigured behavior is explicit and actionable (`configured: false`, `reachable: false`, `error`, `remediation`).
 
 ## 4) MCP transport validation
@@ -46,6 +47,7 @@ It is intentionally repository-focused and does not assume package publishing au
   4. `paperclipDebug.system_snapshot`
   5. `paperclipDebug.prioritize_incidents`
 - [ ] Confirm outputs are machine-usable and include current triage guidance fields where expected.
+- [ ] For Paperclip-backed tool failures, confirm structured error payloads include machine-usable fields (`errorType`, `source`, `httpStatus` when known, `remediation`).
 - [ ] Confirm run/issue/service and packet paths remain callable and coherent.
 
 ## 6) Quality gates
