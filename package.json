@@ -10,6 +10,7 @@
     "check": "npx tsc -p tsconfig.json --noEmit",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "incident:packet": "tsx scripts/build-incident-packet.ts",
+    "collector:new": "tsx scripts/new-collector.ts",
     "test": "vitest run"
   },
   "keywords": [
