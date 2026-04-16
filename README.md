@@ -29,11 +29,32 @@ Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:
 - `paperclipDebug.list_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
+- `paperclipDebug.trace_handoff`
+
+## Live collector config
+
+Set env vars before running:
+
+```bash
+PAPERCLIP_BASE_URL=https://paperclip.simfi-mebel.ru
+PAPERCLIP_TOKEN=...
+PAPERCLIP_COMPANY_ID=...
+PAPERCLIP_PROJECT_ID=...         # optional
+PAPERCLIP_ISSUE_IDS=...,...
+PAPERCLIP_MAX_ISSUES=25          # optional
+DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
+```
+
+Collector behavior:
+- `paperclip-api`: reads issues/comments from Paperclip API (by explicit issue IDs or company/project scope)
+- `docker-cli`: reads real container states from `docker ps -a` and pulls error excerpts from `docker logs`
 
 ## Current scope (v0)
 
 - MCP `stdio` server
 - pluggable collector/adaptor model
+- real `paperclip-api` collector
+- real `docker-cli` collector
 - normalized incident schema
 - incident dedup clustering by fingerprint
 

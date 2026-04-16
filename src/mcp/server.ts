@@ -1,15 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { DockerServiceSampleCollector } from "../collectors/docker-service-sample-collector.js";
-import { PaperclipSampleCollector } from "../collectors/paperclip-sample-collector.js";
+import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
+import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
+import { buildHandoffTraces } from "../core/handoff-trace.js";
 
 export function createMcpServer(): McpServer {
   const registry = new CollectorRegistry();
-  registry.register(new PaperclipSampleCollector());
-  registry.register(new DockerServiceSampleCollector());
+  registry.register(new PaperclipApiCollector());
+  registry.register(new DockerCliCollector());
 
   const server = new McpServer(
     {
@@ -83,6 +84,46 @@ export function createMcpServer(): McpServer {
             type: "text",
             text: JSON.stringify(
               { totalIncidents: incidents.length, totalClusters: clusters.length, clusters },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.trace_handoff",
+    {
+      title: "Trace handoff by run",
+      description:
+        "Builds run-level handoff traces from normalized incidents that have relatedRunId.",
+      inputSchema: {
+        runId: z.string().min(1).optional(),
+        limit: z.number().int().positive().max(200).optional()
+      }
+    },
+    async ({ runId, limit }) => {
+      const incidents = await registry.collectAllIncidents();
+      const traces = buildHandoffTraces(incidents);
+      const filtered = runId ? traces.filter((trace) => trace.runId === runId) : traces;
+      const cut = filtered.slice(0, limit ?? 30);
+      return {
+        structuredContent: {
+          traces: cut,
+          totalTraces: filtered.length,
+          totalIncidents: incidents.length
+        },
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                totalIncidents: incidents.length,
+                totalTraces: filtered.length,
+                traces: cut
+              },
               null,
               2
             )
