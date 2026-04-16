@@ -80,6 +80,15 @@ K8S_NAMESPACE=paperclip
 
 Use this when part of your stack is deployed in Kubernetes and you need pod-level health signals.
 
+## 8) Add PostgreSQL diagnostics
+
+```bash
+POSTGRES_COLLECTOR_ENABLED=true
+POSTGRES_URL=postgres://user:password@db-host:5432/database
+```
+
+Use this for read-only DB health checks (locks, long-running queries, replication lag).
+
 ## Verification sequence
 
 After changing profile:
@@ -93,5 +102,6 @@ After changing profile:
    - `paperclipDebug.wordpress_health`
    - `paperclipDebug.k8s_health`
    - `paperclipDebug.sentry_health`
+   - `paperclipDebug.postgres_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

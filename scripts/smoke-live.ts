@@ -5,6 +5,7 @@ import { listDockerServices } from "../src/integrations/docker-services.js";
 import { listIssues } from "../src/integrations/paperclip-issues.js";
 import { CaddyClient } from "../src/integrations/caddy-client.js";
 import { K8sClient } from "../src/integrations/k8s-client.js";
+import { PostgresClient } from "../src/integrations/postgres-client.js";
 import { SentryClient } from "../src/integrations/sentry-client.js";
 import { WordPressClient } from "../src/integrations/wordpress-client.js";
 
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
   };
   const caddyClient = new CaddyClient();
   const k8sClient = new K8sClient();
+  const postgresClient = new PostgresClient();
   const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
 
@@ -169,6 +171,29 @@ async function main(): Promise<void> {
     report.sentry = {
       status: "skipped",
       reason: "SENTRY_ORG_SLUG/SENTRY_PROJECT_SLUG/SENTRY_AUTH_TOKEN are not set"
+    };
+  }
+
+  if (postgresClient.isEnabled()) {
+    try {
+      const health = await postgresClient.checkHealth();
+      report.postgres = {
+        status: health.reachable ? "ok" : "error",
+        reachable: health.reachable,
+        blockedQueries: health.blockedQueries,
+        longRunningQueries: health.longRunningQueries,
+        replicationLagSeconds: health.replicationLagSeconds
+      };
+    } catch (error: unknown) {
+      report.postgres = {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  } else {
+    report.postgres = {
+      status: "skipped",
+      reason: "POSTGRES_URL is not set"
     };
   }
 

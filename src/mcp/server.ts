@@ -6,6 +6,7 @@ import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
 import { K8sHealthCollector } from "../collectors/k8s-health-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
+import { PostgresHealthCollector } from "../collectors/postgres-health-collector.js";
 import { SentryHealthCollector } from "../collectors/sentry-health-collector.js";
 import { WordPressHealthCollector } from "../collectors/wordpress-health-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
@@ -21,6 +22,7 @@ import { getDockerServiceLogs, listDockerServices } from "../integrations/docker
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
 import { CaddyClient } from "../integrations/caddy-client.js";
 import { K8sClient } from "../integrations/k8s-client.js";
+import { PostgresClient } from "../integrations/postgres-client.js";
 import { SentryClient } from "../integrations/sentry-client.js";
 import { WordPressClient } from "../integrations/wordpress-client.js";
 
@@ -50,6 +52,11 @@ export function createMcpServer(): McpServer {
     })
   );
   registry.register(
+    new PostgresHealthCollector({
+      enabled: runtimeConfig.enablePostgresCollector
+    })
+  );
+  registry.register(
     new FileSystemLogCollector({
       enabled: runtimeConfig.enableFileCollector,
       maxLines: runtimeConfig.fileCollectorMaxLines,
@@ -64,6 +71,7 @@ export function createMcpServer(): McpServer {
   const paperclipClient = new PaperclipApiClient();
   const caddyClient = new CaddyClient();
   const k8sClient = new K8sClient();
+  const postgresClient = new PostgresClient();
   const sentryClient = new SentryClient();
   const wordpressClient = new WordPressClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
@@ -155,6 +163,32 @@ export function createMcpServer(): McpServer {
         };
       }
       const payload = await k8sClient.checkHealth();
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.postgres_health",
+    {
+      title: "PostgreSQL health check",
+      description: "Runs read-only PostgreSQL diagnostics for locks/long-running queries/replication lag.",
+      inputSchema: {}
+    },
+    async () => {
+      if (!postgresClient.isEnabled()) {
+        const payload = {
+          configured: false,
+          error: "PostgreSQL is not configured. Set POSTGRES_COLLECTOR_ENABLED=true and POSTGRES_URL."
+        };
+        return {
+          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+        };
+      }
+      const payload = await postgresClient.checkHealth();
       return {
         structuredContent: payload,
         content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]

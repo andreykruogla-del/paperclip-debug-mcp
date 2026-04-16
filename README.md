@@ -114,10 +114,10 @@ SENTRY_AUTH_TOKEN=
 
 K8S_COLLECTOR_ENABLED=false
 K8S_NAMESPACE=default
+POSTGRES_COLLECTOR_ENABLED=false
+POSTGRES_URL=
 
 # Future optional adapters (template)
-# POSTGRES_COLLECTOR_ENABLED=false
-# POSTGRES_URL=
 # REDIS_COLLECTOR_ENABLED=false
 # REDIS_URL=
 ```
@@ -153,6 +153,7 @@ When adding any new optional adapter, update both:
 - `paperclipDebug.caddy_health`
 - `paperclipDebug.sentry_health`
 - `paperclipDebug.k8s_health`
+- `paperclipDebug.postgres_health`
 
 ## Transport Modes
 
@@ -186,6 +187,7 @@ Current scope:
 - Optional Caddy health collector (health endpoint and proxy log diagnostics)
 - Optional Sentry health collector (unresolved/high-severity issue diagnostics)
 - Optional Kubernetes health collector (namespace/pod diagnostics via kubectl)
+- Optional PostgreSQL health collector (locks/long-running queries/replication lag)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export

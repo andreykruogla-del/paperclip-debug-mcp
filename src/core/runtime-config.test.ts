@@ -12,6 +12,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.enableCaddyCollector).toBe(false);
     expect(cfg.enableSentryCollector).toBe(false);
     expect(cfg.enableK8sCollector).toBe(false);
+    expect(cfg.enablePostgresCollector).toBe(false);
     expect(cfg.fileCollectorPathsCount).toBe(0);
     expect(cfg.fileCollectorMaxLines).toBe(300);
     expect(cfg.mcpHttpPort).toBe(8787);
@@ -24,6 +25,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.hasSentryProjectSlug).toBe(false);
     expect(cfg.hasSentryAuthToken).toBe(false);
     expect(cfg.hasK8sNamespace).toBe(false);
+    expect(cfg.hasPostgresUrl).toBe(false);
     expect(cfg.paperclipMaxIssues).toBe(25);
   });
 
@@ -36,6 +38,7 @@ describe("readRuntimeConfig", () => {
       CADDY_COLLECTOR_ENABLED: "1",
       SENTRY_COLLECTOR_ENABLED: "true",
       K8S_COLLECTOR_ENABLED: "true",
+      POSTGRES_COLLECTOR_ENABLED: "1",
       FILE_COLLECTOR_PATHS: "/tmp/a.log;/tmp/b.log",
       FILE_COLLECTOR_MAX_LINES: "9999",
       FILE_COLLECTOR_INCLUDE_PATTERN: "panic|fatal",
@@ -50,6 +53,7 @@ describe("readRuntimeConfig", () => {
     expect(cfg.enableCaddyCollector).toBe(true);
     expect(cfg.enableSentryCollector).toBe(true);
     expect(cfg.enableK8sCollector).toBe(true);
+    expect(cfg.enablePostgresCollector).toBe(true);
     expect(cfg.fileCollectorPathsCount).toBe(2);
     expect(cfg.fileCollectorMaxLines).toBe(5000);
     expect(cfg.fileCollectorPattern).toBe("panic|fatal");
@@ -72,7 +76,8 @@ describe("readRuntimeConfig", () => {
       SENTRY_ORG_SLUG: "simfi",
       SENTRY_PROJECT_SLUG: "paperclip",
       SENTRY_AUTH_TOKEN: "sntrys_123",
-      K8S_NAMESPACE: "paperclip"
+      K8S_NAMESPACE: "paperclip",
+      POSTGRES_URL: "postgres://user:pass@localhost:5432/paperclip"
     });
     expect(cfg.hasPaperclipBaseUrl).toBe(true);
     expect(cfg.hasPaperclipToken).toBe(true);
@@ -86,5 +91,6 @@ describe("readRuntimeConfig", () => {
     expect(cfg.hasSentryProjectSlug).toBe(true);
     expect(cfg.hasSentryAuthToken).toBe(true);
     expect(cfg.hasK8sNamespace).toBe(true);
+    expect(cfg.hasPostgresUrl).toBe(true);
   });
 });

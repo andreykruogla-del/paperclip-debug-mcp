@@ -73,6 +73,14 @@ Use this when you need fast visibility into unresolved production exceptions.
 
 Use this when agent runtimes are in k8s and pod health is suspect.
 
+## 4f) PostgreSQL dependency path
+
+1. `paperclipDebug.postgres_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when DB load/locks/replication may be impacting agent flows.
+
 ## 5) Evidence export
 
 ```bash
