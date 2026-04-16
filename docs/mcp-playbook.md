@@ -10,6 +10,11 @@ This playbook gives ready-to-run diagnostic sequences for coding agents.
 
 Use this when you need immediate operational focus.
 
+Before triage on new installs:
+
+1. `paperclipDebug.get_runtime_config`
+2. `paperclipDebug.list_collectors`
+
 ## 2) Failed run investigation
 
 1. `paperclipDebug.list_runs` (find failed run)

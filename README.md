@@ -79,6 +79,7 @@ PAPERCLIP_COMPANY_ID=...
 PAPERCLIP_PROJECT_ID=...         # optional
 PAPERCLIP_ISSUE_IDS=...,...      # optional override
 PAPERCLIP_MAX_ISSUES=25          # optional
+PAPERCLIP_COLLECTOR_ENABLED=true
 DOCKER_COLLECTOR_ENABLED=true    # set false to disable docker collector
 MCP_HTTP_PORT=8787
 MCP_HTTP_AUTH_TOKEN=...          # optional bearer token for HTTP mode
@@ -89,6 +90,7 @@ Start from [`.env.example`](.env.example).
 ## Core MCP Tools
 
 - `paperclipDebug.list_collectors`
+- `paperclipDebug.get_runtime_config`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
 - `paperclipDebug.prioritize_incidents`

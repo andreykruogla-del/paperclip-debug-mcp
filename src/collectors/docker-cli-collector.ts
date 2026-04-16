@@ -40,10 +40,9 @@ export class DockerCliCollector implements IncidentCollector {
   public readonly enabled: boolean;
   private readonly maxLogLines: number;
 
-  public constructor(maxLogLines = 40) {
+  public constructor(maxLogLines = 40, enabled = true) {
     this.maxLogLines = maxLogLines;
-    const disabledByEnv = (process.env.DOCKER_COLLECTOR_ENABLED ?? "true").toLowerCase() === "false";
-    this.enabled = !disabledByEnv;
+    this.enabled = enabled;
   }
 
   public async collectIncidents(): Promise<Incident[]> {

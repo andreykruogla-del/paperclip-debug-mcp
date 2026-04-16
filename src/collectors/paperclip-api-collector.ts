@@ -37,6 +37,7 @@ type PaperclipCollectorOptions = {
   projectId?: string;
   issueIds?: string[];
   maxIssues?: number;
+  enabled?: boolean;
 };
 
 function statusToSeverity(status: string | undefined): IncidentSeverity {
@@ -84,7 +85,8 @@ export class PaperclipApiCollector implements IncidentCollector {
       (Number.isFinite(envMaxIssues) && envMaxIssues > 0 ? Math.min(envMaxIssues, 200) : 25);
 
     this.client = new PaperclipApiClient({ baseUrl: this.baseUrl, token: this.token });
-    this.enabled = this.client.isEnabled();
+    const enabledByConfig = options?.enabled ?? true;
+    this.enabled = enabledByConfig && this.client.isEnabled();
   }
 
   public async collectIncidents(): Promise<Incident[]> {

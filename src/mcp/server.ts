@@ -8,15 +8,22 @@ import { clusterIncidents } from "../core/incident-analysis.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
 import { buildIncidentPacket } from "../core/incident-packet.js";
 import { prioritizeIncidents } from "../core/incident-priority.js";
+import { readRuntimeConfig } from "../core/runtime-config.js";
 import { PaperclipApiClient, firstString } from "../integrations/paperclip-client.js";
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
 
 export function createMcpServer(): McpServer {
+  const runtimeConfig = readRuntimeConfig();
   const registry = new CollectorRegistry();
-  registry.register(new PaperclipApiCollector());
-  registry.register(new DockerCliCollector());
+  registry.register(
+    new PaperclipApiCollector({
+      enabled: runtimeConfig.enablePaperclipCollector,
+      maxIssues: runtimeConfig.paperclipMaxIssues
+    })
+  );
+  registry.register(new DockerCliCollector(40, runtimeConfig.enableDockerCollector));
   const paperclipClient = new PaperclipApiClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
   const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);
@@ -31,6 +38,19 @@ export function createMcpServer(): McpServer {
         "Paperclip Debug MCP exposes normalized incidents and collector health. " +
         "Use list_collectors first, then list_incidents."
     }
+  );
+
+  server.registerTool(
+    "paperclipDebug.get_runtime_config",
+    {
+      title: "Get runtime config",
+      description: "Returns sanitized runtime config and capability flags.",
+      inputSchema: {}
+    },
+    async () => ({
+      structuredContent: runtimeConfig,
+      content: [{ type: "text", text: JSON.stringify(runtimeConfig, null, 2) }]
+    })
   );
 
   server.registerTool(
