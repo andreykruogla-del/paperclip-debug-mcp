@@ -85,6 +85,10 @@ FILE_COLLECTOR_ENABLED=false     # enable host log collector
 FILE_COLLECTOR_PATHS=            # ; or , separated log file paths
 FILE_COLLECTOR_MAX_LINES=300     # tail lines per file
 FILE_COLLECTOR_INCLUDE_PATTERN=error|exception|failed|timeout|refused|unauthor
+WORDPRESS_COLLECTOR_ENABLED=false
+WORDPRESS_BASE_URL=              # e.g. https://site.example.com
+WORDPRESS_USERNAME=              # optional for auth check
+WORDPRESS_APP_PASSWORD=          # optional for auth check
 MCP_HTTP_PORT=8787
 MCP_HTTP_AUTH_TOKEN=...          # optional bearer token for HTTP mode
 ```
@@ -95,6 +99,7 @@ Start from [`.env.example`](.env.example).
 
 - `paperclipDebug.list_collectors`
 - `paperclipDebug.get_runtime_config`
+- `paperclipDebug.wordpress_health`
 - `paperclipDebug.refresh_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
@@ -137,6 +142,7 @@ Current scope:
 - Paperclip API collector (issues/comments/runs/events)
 - Docker collector (services + logs)
 - Filesystem log collector (host log files via configured paths)
+- WordPress health collector (REST availability, XML-RPC, auth check)
 - Incident clustering and handoff trace
 - Incident prioritization and system snapshot
 - Incident packet builder and CLI export
@@ -164,6 +170,7 @@ The architecture is collector-based. Any runtime can be integrated if it maps in
 ## Target adapters
 
 - `Paperclip`
+- `WordPress`
 - `Hermes Agent`
 - `OpenClaw`
 - `OpenCode`

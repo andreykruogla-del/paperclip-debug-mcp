@@ -2,6 +2,7 @@ export type RuntimeConfig = {
   enablePaperclipCollector: boolean;
   enableDockerCollector: boolean;
   enableFileCollector: boolean;
+  enableWordpressCollector: boolean;
   fileCollectorPathsCount: number;
   fileCollectorMaxLines: number;
   fileCollectorPattern: string;
@@ -11,6 +12,8 @@ export type RuntimeConfig = {
   hasPaperclipToken: boolean;
   hasPaperclipCompanyId: boolean;
   hasPaperclipProjectId: boolean;
+  hasWordpressBaseUrl: boolean;
+  hasWordpressAuth: boolean;
   paperclipMaxIssues: number;
 };
 
@@ -39,6 +42,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     enablePaperclipCollector: parseBoolean(env.PAPERCLIP_COLLECTOR_ENABLED, true),
     enableDockerCollector: parseBoolean(env.DOCKER_COLLECTOR_ENABLED, true),
     enableFileCollector: parseBoolean(env.FILE_COLLECTOR_ENABLED, false),
+    enableWordpressCollector: parseBoolean(env.WORDPRESS_COLLECTOR_ENABLED, false),
     fileCollectorPathsCount: fileCollectorPaths.length,
     fileCollectorMaxLines: Math.min(parsePositiveInt(env.FILE_COLLECTOR_MAX_LINES, 300), 5000),
     fileCollectorPattern,
@@ -48,6 +52,13 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     hasPaperclipToken: Boolean(env.PAPERCLIP_TOKEN && env.PAPERCLIP_TOKEN.trim().length > 0),
     hasPaperclipCompanyId: Boolean(env.PAPERCLIP_COMPANY_ID && env.PAPERCLIP_COMPANY_ID.trim().length > 0),
     hasPaperclipProjectId: Boolean(env.PAPERCLIP_PROJECT_ID && env.PAPERCLIP_PROJECT_ID.trim().length > 0),
+    hasWordpressBaseUrl: Boolean(env.WORDPRESS_BASE_URL && env.WORDPRESS_BASE_URL.trim().length > 0),
+    hasWordpressAuth: Boolean(
+      env.WORDPRESS_USERNAME &&
+        env.WORDPRESS_USERNAME.trim().length > 0 &&
+        env.WORDPRESS_APP_PASSWORD &&
+        env.WORDPRESS_APP_PASSWORD.trim().length > 0
+    ),
     paperclipMaxIssues: Math.min(parsePositiveInt(env.PAPERCLIP_MAX_ISSUES, 25), 200)
   };
 }

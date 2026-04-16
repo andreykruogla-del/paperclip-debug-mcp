@@ -40,6 +40,14 @@ Use this for structured handoff between CTO/Coder/QA/Observer.
 
 Use this when root cause likely comes from infrastructure/service layer.
 
+## 4b) WordPress dependency path
+
+1. `paperclipDebug.wordpress_health`
+2. `paperclipDebug.refresh_collectors`
+3. `paperclipDebug.prioritize_incidents` with `minBand=warning`
+
+Use this when ingestion/update flow depends on WordPress API availability.
+
 ## 5) Evidence export
 
 ```bash

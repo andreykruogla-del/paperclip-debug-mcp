@@ -36,6 +36,18 @@ FILE_COLLECTOR_PATHS=/srv/debug/app.log;/srv/debug/bridge.log
 
 Use this for isolated debugging when Paperclip API or Docker is unavailable.
 
+## 4) Add WordPress health checks
+
+```bash
+WORDPRESS_COLLECTOR_ENABLED=true
+WORDPRESS_BASE_URL=https://site.example.com
+WORDPRESS_USERNAME=wp_admin
+WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
+```
+
+Use this when your pipeline depends on WordPress (catalog updates/media flows).
+If auth fields are omitted, collector still validates public REST + XML-RPC surface.
+
 ## Verification sequence
 
 After changing profile:
@@ -45,5 +57,6 @@ After changing profile:
 3. Call:
    - `paperclipDebug.get_runtime_config`
    - `paperclipDebug.list_collectors`
+   - `paperclipDebug.wordpress_health`
    - `paperclipDebug.refresh_collectors`
    - `paperclipDebug.prioritize_incidents`

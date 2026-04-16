@@ -4,6 +4,7 @@ import { z } from "zod";
 import { DockerCliCollector } from "../collectors/docker-cli-collector.js";
 import { FileSystemLogCollector } from "../collectors/filesystem-log-collector.js";
 import { PaperclipApiCollector } from "../collectors/paperclip-api-collector.js";
+import { WordPressHealthCollector } from "../collectors/wordpress-health-collector.js";
 import { CollectorRegistry } from "../core/registry.js";
 import { clusterIncidents } from "../core/incident-analysis.js";
 import { buildHandoffTraces } from "../core/handoff-trace.js";
@@ -14,6 +15,7 @@ import { PaperclipApiClient, firstString } from "../integrations/paperclip-clien
 import { getRunEvents, listRuns } from "../integrations/paperclip-runs.js";
 import { getDockerServiceLogs, listDockerServices } from "../integrations/docker-services.js";
 import { getIssueComments, listIssues } from "../integrations/paperclip-issues.js";
+import { WordPressClient } from "../integrations/wordpress-client.js";
 
 export function createMcpServer(): McpServer {
   const runtimeConfig = readRuntimeConfig();
@@ -32,7 +34,13 @@ export function createMcpServer(): McpServer {
       includePattern: runtimeConfig.fileCollectorPattern
     })
   );
+  registry.register(
+    new WordPressHealthCollector({
+      enabled: runtimeConfig.enableWordpressCollector
+    })
+  );
   const paperclipClient = new PaperclipApiClient();
+  const wordpressClient = new WordPressClient();
   const paperclipCompanyId = firstString(process.env.PAPERCLIP_COMPANY_ID);
   const paperclipProjectId = firstString(process.env.PAPERCLIP_PROJECT_ID);
 
@@ -73,6 +81,32 @@ export function createMcpServer(): McpServer {
       return {
         structuredContent: { collectors },
         content: [{ type: "text", text: JSON.stringify({ collectors }, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "paperclipDebug.wordpress_health",
+    {
+      title: "WordPress health check",
+      description: "Runs direct WordPress checks for REST availability, XML-RPC, and optional auth.",
+      inputSchema: {}
+    },
+    async () => {
+      if (!wordpressClient.isEnabled()) {
+        const payload = {
+          configured: false,
+          error: "WordPress is not configured. Set WORDPRESS_BASE_URL."
+        };
+        return {
+          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+        };
+      }
+      const payload = await wordpressClient.checkHealth();
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
       };
     }
   );

@@ -1,4 +1,4 @@
-export type CollectorKind = "paperclip" | "docker_service" | "external";
+export type CollectorKind = "paperclip" | "docker_service" | "wordpress" | "external";
 
 export type IncidentSeverity = "info" | "warning" | "error" | "critical";
 
