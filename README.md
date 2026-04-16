@@ -26,6 +26,7 @@ npm install
 cp .env.example .env
 npm run mcp:stdio
 npm run smoke:live
+npm run incident:packet -- --issue-id <issue-id>
 ```
 
 Then connect from your MCP client (`Codex`, `Claude`, `Cursor`, etc.) and call:

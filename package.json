@@ -8,7 +8,8 @@
     "build": "npx tsc -p tsconfig.json",
     "mcp:stdio": "tsx scripts/mcp-stdio.ts",
     "check": "npx tsc -p tsconfig.json --noEmit",
-    "smoke:live": "tsx scripts/smoke-live.ts"
+    "smoke:live": "tsx scripts/smoke-live.ts",
+    "incident:packet": "tsx scripts/build-incident-packet.ts"
   },
   "keywords": [
     "paperclip",
