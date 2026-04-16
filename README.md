@@ -1,40 +1,40 @@
 # Paperclip Debug MCP
 
-`Paperclip Debug MCP` - MCP-first слой для диагностики инцидентов в агентных системах на базе Paperclip.
+Paperclip Debug MCP is an MCP-first debugging and incident intelligence layer for Paperclip-based agent systems.
 
-## Что это и зачем
+## What It Is and Why
 
-Когда инциденты разбираются через набор разрозненных инструментов, команда тратит время на ручную сборку контекста: логи, ран-события, issue-комментарии, состояние сервисов.
+When incidents are investigated with disconnected tools, teams lose time rebuilding context from logs, run events, issue threads, and infrastructure signals.
 
-`Paperclip Debug MCP` дает один интерфейс для расследования: агент запрашивает структурированные данные и быстрее приходит к рабочей гипотезе причины.
+Paperclip Debug MCP provides one queryable interface so coding agents can retrieve structured evidence and move faster to actionable root-cause hypotheses.
 
-Ориентир по эффекту (внутренние замеры, как диапазоны):
+Observed impact from internal tests (directional ranges, not guarantees):
 
-- Time to first root-cause hypothesis: `-40% ... -85%`
-- Debug loops per incident: `-30% ... -70%`
-- Tokens per resolved incident: `-25% ... -65%`
-- Time to build evidence packet: `-60% ... -95%`
+- Time to first root-cause hypothesis: `-40% to -85%`
+- Debug loops per incident: `-30% to -70%`
+- Tokens per resolved incident: `-25% to -65%`
+- Time to build evidence packet: `-60% to -95%`
 
-## Единый контрольный слой
+## Unified Control Layer
 
-Ключевая идея проекта: вместо набора отдельных утилит (Paperclip UI/API, docker logs, infra-checks, ручные заметки) используется единый контрольный слой с адаптерами.
+The core product idea is a single control layer with adapters, instead of a fragmented stack of standalone debugging utilities.
 
-Этот слой:
+This layer:
 
-- нормализует сигналы из разных источников в общий формат инцидентов;
-- отдает данные через единый MCP surface;
-- поддерживает adapter-driven расширение без переписывания core tooling.
+- normalizes signals from multiple sources into one incident model;
+- exposes a single MCP surface for investigation workflows;
+- scales through adapter-based extension without rewriting core triage tooling.
 
-Сейчас в контуре: Paperclip API + Docker + optional health adapters (WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, Redis) + host file logs.
+Current coverage includes Paperclip API, Docker, host file logs, and optional health adapters for WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis.
 
-## Что вы получаете
+## What You Get
 
-- Быстрый triage и приоритизация инцидентов.
-- Кластеризацию по fingerprint и анализ трендов.
-- Handoff trace по run-связям между ролями/этапами.
-- Единые запросы к runs, events, issues, comments, services и logs.
-- Сборку incident packet для handoff и аудита.
-- Базовую редактирующую защиту: redaction token-like секретов в excerpt-данных.
+- Faster incident triage and prioritization.
+- Incident clustering by fingerprint and trend analysis.
+- Run-level handoff tracing for investigation continuity.
+- Unified queries for runs, events, issues, comments, services, and logs.
+- Incident packet generation for handoff and audit workflows.
+- Redaction of token-like secrets in returned excerpts.
 
 ## Quick Start
 
@@ -44,25 +44,25 @@ cp .env.example .env
 npm run doctor
 npm run smoke:live
 npm run mcp:stdio
-# или
+# or
 npm run mcp:http
 ```
 
-Экспорт пакета инцидента:
+Optional incident packet export:
 
 ```bash
 npm run incident:packet -- --issue-id <issue-id>
-# или
+# or
 npm run incident:packet -- --run-id <run-id>
 ```
 
-Базовая конфигурация задается через `.env` (см. `.env.example`). Ключевые переменные: `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, флаги включения коллекторов и параметры HTTP-транспорта.
+Configuration is environment-driven via `.env` (see `.env.example`). Key settings include `PAPERCLIP_BASE_URL`, `PAPERCLIP_TOKEN`, `PAPERCLIP_COMPANY_ID`, collector enable flags, and HTTP transport options.
 
-## Документация
+## Documentation
 
-- [MCP Playbook](docs/mcp-playbook.md) - готовые диагностические последовательности.
-- [Runtime Profiles](docs/runtime-profiles.md) - практичные `.env` профили под типовые стеки.
-- [Collector Adapter Guide](docs/collector-adapter-guide.md) - как добавлять новые адаптеры.
+- [MCP Playbook](docs/mcp-playbook.md): ready-to-run diagnostic call sequences.
+- [Runtime Profiles](docs/runtime-profiles.md): practical `.env` profiles for common runtime stacks.
+- [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
 
 ## MCP Tools
 
@@ -94,10 +94,10 @@ Optional adapter tools:
 - `paperclipDebug.postgres_health`
 - `paperclipDebug.redis_health`
 
-## Транспорты
+## Transports
 
-- `mcp:stdio` - локальный stdio режим для MCP клиентов.
-- `mcp:http` - streamable HTTP MCP сервер.
+- `mcp:stdio`: local stdio mode for MCP clients.
+- `mcp:http`: streamable HTTP MCP server mode.
 
 HTTP endpoints:
 
@@ -106,25 +106,25 @@ HTTP endpoints:
 - `DELETE /mcp`
 - `GET /healthz`
 
-Опционально поддерживается bearer auth через `MCP_HTTP_AUTH_TOKEN`.
+Optional bearer auth is supported via `MCP_HTTP_AUTH_TOKEN`.
 
-## Текущий статус
+## Current Status
 
-Проект находится в active beta с рабочими коллекторами и инструментами расследования.
+This project is in active beta with working collectors and investigation tooling.
 
-Текущий scope:
+Current scope:
 
-- MCP server (`stdio` + `http`)
-- Paperclip API collector (issues/comments/runs/events)
-- Docker collector (services/logs)
+- MCP server (`stdio` and `http`)
+- Paperclip API collector (issues, comments, runs, events)
+- Docker collector (services and logs)
 - Filesystem log collector
 - Optional ecosystem adapters: WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, Redis
-- Incident clustering, trends, prioritization, handoff trace
-- Incident packet builder и CLI export
+- Incident clustering, trends, prioritization, and handoff trace
+- Incident packet builder and CLI export
 
-## Разработка
+## Development
 
-Основные команды качества и сборки:
+Quality and build commands:
 
 ```bash
 npm run check
@@ -132,7 +132,7 @@ npm run build
 npm run test
 ```
 
-Сервисные команды:
+Operational utility commands:
 
 ```bash
 npm run doctor
@@ -141,4 +141,4 @@ npm run benchmark:report -- --input-dir ./artifacts --output ./artifacts/benchma
 npm run collector:new -- --name wordpress --kind external
 ```
 
-При добавлении нового optional adapter обновляйте синхронно: `README.md`, `.env.example` и `docs/runtime-profiles.md`.
+When adding a new optional adapter, update `README.md`, `.env.example`, and `docs/runtime-profiles.md` in the same PR.
