@@ -91,6 +91,7 @@ Start from [`.env.example`](.env.example).
 
 - `paperclipDebug.list_collectors`
 - `paperclipDebug.get_runtime_config`
+- `paperclipDebug.refresh_collectors`
 - `paperclipDebug.list_incidents`
 - `paperclipDebug.list_incident_clusters`
 - `paperclipDebug.prioritize_incidents`

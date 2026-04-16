@@ -1,5 +1,5 @@
 import type { IncidentCollector } from "./collector-interface.js";
-import type { CollectorStatus, Incident } from "./types.js";
+import type { CollectorRefreshResult, CollectorStatus, Incident } from "./types.js";
 import { computeFingerprint } from "./incident-analysis.js";
 
 export class CollectorRegistry {
@@ -20,7 +20,8 @@ export class CollectorRegistry {
   }
 
   public async collectAllIncidents(): Promise<Incident[]> {
-    const chunks = await Promise.all(this.collectors.map((collector) => this.collectOne(collector)));
+    const results = await this.refreshCollectors();
+    const chunks = results.map((result) => result.incidents);
     return chunks
       .flat()
       .map((incident) => ({
@@ -30,29 +31,67 @@ export class CollectorRegistry {
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  private async collectOne(collector: IncidentCollector): Promise<Incident[]> {
+  public async refreshCollectors(): Promise<(CollectorRefreshResult & { incidents: Incident[] })[]> {
+    const results = await Promise.all(this.collectors.map((collector) => this.collectOne(collector)));
+    return results
+      .map((result) => ({
+        ...result,
+        incidents: result.incidents.map((incident) => ({
+          ...incident,
+          fingerprint: incident.fingerprint ?? computeFingerprint(incident)
+        }))
+      }))
+      .sort((a, b) => (b.lastRunAt ?? 0) - (a.lastRunAt ?? 0));
+  }
+
+  private async collectOne(
+    collector: IncidentCollector
+  ): Promise<CollectorRefreshResult & { incidents: Incident[] }> {
     if (!collector.enabled) {
-      return [];
+      return {
+        id: collector.id,
+        kind: collector.kind,
+        enabled: collector.enabled,
+        incidentCount: 0,
+        incidents: []
+      };
     }
 
+    const lastRunAt = Date.now();
     try {
       const incidents = await collector.collectIncidents();
       this.statuses.set(collector.id, {
         id: collector.id,
         kind: collector.kind,
         enabled: collector.enabled,
-        lastRunAt: Date.now()
+        lastRunAt
       });
-      return incidents;
+      return {
+        id: collector.id,
+        kind: collector.kind,
+        enabled: collector.enabled,
+        incidentCount: incidents.length,
+        lastRunAt,
+        incidents
+      };
     } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       this.statuses.set(collector.id, {
         id: collector.id,
         kind: collector.kind,
         enabled: collector.enabled,
-        lastRunAt: Date.now(),
-        lastError: error instanceof Error ? error.message : String(error)
+        lastRunAt,
+        lastError: message
       });
-      return [];
+      return {
+        id: collector.id,
+        kind: collector.kind,
+        enabled: collector.enabled,
+        incidentCount: 0,
+        lastRunAt,
+        lastError: message,
+        incidents: []
+      };
     }
   }
 }

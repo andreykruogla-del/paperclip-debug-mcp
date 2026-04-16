@@ -14,6 +14,7 @@ Before triage on new installs:
 
 1. `paperclipDebug.get_runtime_config`
 2. `paperclipDebug.list_collectors`
+3. `paperclipDebug.refresh_collectors`
 
 ## 2) Failed run investigation
 

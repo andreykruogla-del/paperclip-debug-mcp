@@ -70,6 +70,28 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "paperclipDebug.refresh_collectors",
+    {
+      title: "Refresh collectors",
+      description: "Runs all enabled collectors and returns per-collector incident counts and errors.",
+      inputSchema: {}
+    },
+    async () => {
+      const results = await registry.refreshCollectors();
+      const payload = {
+        collectors: results.map(({ incidents, ...meta }) => meta),
+        totalIncidents: results.reduce((sum, item) => sum + item.incidentCount, 0),
+        activeCollectors: results.filter((item) => item.enabled).length,
+        failedCollectors: results.filter((item) => Boolean(item.lastError)).length
+      };
+      return {
+        structuredContent: payload,
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+      };
+    }
+  );
+
+  server.registerTool(
     "paperclipDebug.list_incidents",
     {
       title: "List incidents",

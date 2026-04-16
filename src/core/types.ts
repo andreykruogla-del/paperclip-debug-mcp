@@ -23,3 +23,12 @@ export type CollectorStatus = {
   lastRunAt?: number;
   lastError?: string;
 };
+
+export type CollectorRefreshResult = {
+  id: string;
+  kind: CollectorKind;
+  enabled: boolean;
+  incidentCount: number;
+  lastRunAt?: number;
+  lastError?: string;
+};
