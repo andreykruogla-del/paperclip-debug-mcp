@@ -44,14 +44,15 @@ Current coverage includes Paperclip API, Docker, host file logs, and optional he
 
 ## Public Beta Scope Note
 
-Latest authenticated field validation supports an issue-centric public beta scope.
+Latest authenticated field validation supports a run-aware public beta scope in the validated authenticated deployment profile.
 
-- Validated as usable now: issue-centric investigation (`list_issues`, `get_issue_comments`, prioritization, packet flow).
-- Not validated as usable in the target authenticated deployment: run-centric investigation (`list_runs`, `get_run_events`, `trace_handoff`) because source issue-to-run linkage values are currently empty in that deployment.
+- Validated as usable now: issue-centric investigation (`list_issues`, `get_issue_comments`, prioritization, packet flow with run context when linked data exists).
+- Validated as usable now: run-aware investigation (`list_runs`, `get_run_events`, `trace_handoff`) on fresh authenticated field cases after upstream linkage-contract fixes.
+- Deployment caveat: run-aware outputs still depend on source deployment emitting run-linked transition data and exposing stable linkage aliases in issue payloads.
 
 For the current release decision, see:
 
-- `docs/issue-centric-public-beta-decision.md`
+- `docs/run-aware-public-beta-decision.md`
 - `docs/public-beta-readiness-report.md`
 
 ## Quick Start
@@ -87,7 +88,8 @@ For authenticated deployments, use the Paperclip quick-check subsection in `docs
 - [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
 - [Release Readiness Checklist](docs/release-readiness-checklist.md): lightweight public-beta release validation.
 - [Public Beta Readiness Report](docs/public-beta-readiness-report.md): latest release-candidate validation decision memo.
-- [Issue-Centric Public Beta Decision](docs/issue-centric-public-beta-decision.md): current safe public-beta scope and expansion gates.
+- [Run-Aware Public Beta Decision](docs/run-aware-public-beta-decision.md): current safe public-beta scope and deployment conditions.
+- [Issue-Centric Public Beta Decision](docs/issue-centric-public-beta-decision.md): historical constrained decision note superseded by run-aware validation.
 
 ## MCP Tools
 
@@ -150,7 +152,7 @@ Current scope:
 Current validated public-beta posture:
 
 - Issue-centric scope: validated for authenticated deployment.
-- Run-centric claims: deferred until deployment provides non-empty run-linkage source data.
+- Run-aware scope: validated for authenticated deployment where upstream/source emits run-linked handoff transitions and issue linkage aliases.
 
 ## Public Beta Surface
 
