@@ -70,6 +70,92 @@ describe("paperclip-runs compatibility fallback", () => {
     expect(result.runs.map((run) => run.runId)).toEqual(["run-123", "run-456"]);
   });
 
+  it("maps fallback run linkage from executionRunId when runId is absent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
+        const pathWithQuery = `${url.pathname}${url.search}`;
+
+        if (
+          pathWithQuery.startsWith("/api/runs") ||
+          pathWithQuery.startsWith("/api/run-logs") ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs`) ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`)
+        ) {
+          return new Response("not found", { status: 404 });
+        }
+
+        if (pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/issues`)) {
+          return new Response(
+            JSON.stringify({
+              issues: [
+                {
+                  id: "issue-exec",
+                  title: "Issue exec linkage",
+                  status: "in_progress",
+                  executionRunId: "run-exec-1",
+                  updatedAt: "2026-04-10T10:00:00.000Z",
+                  assigneeAgentId: "agent-1"
+                }
+              ]
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response("unexpected path", { status: 500 });
+      })
+    );
+
+    const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
+    expect(result.runs.map((run) => run.runId)).toEqual(["run-exec-1"]);
+  });
+
+  it("maps fallback run linkage from activeRun.id when top-level run ids are absent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
+        const pathWithQuery = `${url.pathname}${url.search}`;
+
+        if (
+          pathWithQuery.startsWith("/api/runs") ||
+          pathWithQuery.startsWith("/api/run-logs") ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs`) ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`)
+        ) {
+          return new Response("not found", { status: 404 });
+        }
+
+        if (pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/issues`)) {
+          return new Response(
+            JSON.stringify({
+              issues: [
+                {
+                  id: "issue-active",
+                  title: "Issue active linkage",
+                  status: "in_progress",
+                  activeRun: {
+                    id: "run-active-1"
+                  },
+                  updatedAt: "2026-04-10T10:00:00.000Z",
+                  assigneeAgentId: "agent-1"
+                }
+              ]
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response("unexpected path", { status: 500 });
+      })
+    );
+
+    const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
+    expect(result.runs.map((run) => run.runId)).toEqual(["run-active-1"]);
+  });
+
   it("falls back to issue comments for run events when run event routes are unavailable", async () => {
     vi.stubGlobal(
       "fetch",

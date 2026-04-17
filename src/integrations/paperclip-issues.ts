@@ -29,6 +29,9 @@ function mapIssue(issue: IssueShape): PaperclipIssueSummary | null {
   const assigneeAgent = issue.assigneeAgent && typeof issue.assigneeAgent === "object"
     ? (issue.assigneeAgent as Record<string, unknown>)
     : undefined;
+  const activeRun = issue.activeRun && typeof issue.activeRun === "object"
+    ? (issue.activeRun as Record<string, unknown>)
+    : undefined;
   return {
     issueId,
     title: firstString(issue.title) ?? `Issue ${issueId}`,
@@ -36,7 +39,15 @@ function mapIssue(issue: IssueShape): PaperclipIssueSummary | null {
     priority: firstString(issue.priority),
     assigneeAgentId: firstString(issue.assigneeAgentId),
     assigneeAgentName: firstString(assigneeAgent?.name),
-    relatedRunId: firstString(issue.runId),
+    relatedRunId:
+      firstString(issue.relatedRunId) ??
+      firstString(issue.runId) ??
+      firstString(issue.run_id) ??
+      firstString(issue.executionRunId) ??
+      firstString(issue.checkoutRunId) ??
+      firstString(issue.originRunId) ??
+      firstString(activeRun?.id) ??
+      firstString(activeRun?.runId),
     updatedAt: toTimestamp(
       (issue.updatedAt as string | number | undefined) ??
         (issue.createdAt as string | number | undefined)
