@@ -2,6 +2,10 @@
 
 Paperclip Debug MCP is an MCP-first debugging and incident intelligence layer for Paperclip-based agent systems.
 
+<p align="center">
+  <img src="docs/images/paperclip-debug-mcp-hero.jpg" alt="Paperclip Debug MCP - unified MCP investigation layer" width="100%">
+</p>
+
 ## What It Is and Why
 
 When incidents are investigated with disconnected tools, teams lose time rebuilding context from logs, run events, issue threads, and infrastructure signals.
