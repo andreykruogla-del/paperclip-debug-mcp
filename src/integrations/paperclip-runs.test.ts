@@ -12,13 +12,46 @@ function createClient(): PaperclipApiClient {
   });
 }
 
-describe("paperclip-runs compatibility fallback", () => {
+describe("paperclip-runs source selection", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("falls back to company issues when dedicated run routes are unavailable", async () => {
+  it("uses heartbeat run routes as primary list source", async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
+      const pathWithQuery = `${url.pathname}${url.search}`;
+      if (pathWithQuery.startsWith("/api/heartbeat-runs")) {
+        return new Response(
+          JSON.stringify({
+            runs: [
+              {
+                id: "run-native-1",
+                status: "succeeded",
+                startedAt: "2026-04-10T10:00:00.000Z"
+              }
+            ]
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response("unexpected path", { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
+
+    expect(result.sourcePath).toContain("/api/heartbeat-runs");
+    expect(result.runs.map((run) => run.runId)).toEqual(["run-native-1"]);
+    expect(
+      fetchSpy.mock.calls.some((call) =>
+        String(call[0]).includes(`/api/companies/${COMPANY_ID}/issues`)
+      )
+    ).toBe(false);
+  });
+
+  it("uses issue-to-runs association before issue-derived fallback", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -26,8 +59,10 @@ describe("paperclip-runs compatibility fallback", () => {
         const pathWithQuery = `${url.pathname}${url.search}`;
 
         if (
+          pathWithQuery.startsWith("/api/heartbeat-runs") ||
           pathWithQuery.startsWith("/api/runs") ||
           pathWithQuery.startsWith("/api/run-logs") ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/heartbeat-runs`) ||
           pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs`) ||
           pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`)
         ) {
@@ -42,17 +77,22 @@ describe("paperclip-runs compatibility fallback", () => {
                   id: "issue-1",
                   title: "Issue 1",
                   status: "in_progress",
-                  runId: "run-123",
-                  updatedAt: "2026-04-10T10:00:00.000Z",
-                  assigneeAgentId: "agent-1"
-                },
+                  updatedAt: "2026-04-10T10:00:00.000Z"
+                }
+              ]
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        if (pathWithQuery.startsWith("/api/issues/issue-1/runs")) {
+          return new Response(
+            JSON.stringify({
+              runs: [
                 {
-                  id: "issue-2",
-                  title: "Issue 2",
-                  status: "blocked",
-                  runId: "run-456",
-                  updatedAt: "2026-04-10T09:00:00.000Z",
-                  assigneeAgentId: "agent-2"
+                  id: "run-assoc-1",
+                  status: "running",
+                  startedAt: "2026-04-10T10:05:00.000Z"
                 }
               ]
             }),
@@ -65,12 +105,12 @@ describe("paperclip-runs compatibility fallback", () => {
     );
 
     const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
-    expect(result.sourcePath).toContain(`/api/companies/${COMPANY_ID}/issues`);
-    expect(result.sourcePath).toContain("#derived_from_issues");
-    expect(result.runs.map((run) => run.runId)).toEqual(["run-123", "run-456"]);
+    expect(result.sourcePath).toContain("/api/issues/issue-1/runs");
+    expect(result.sourcePath).toContain("#derived_from_issue_runs_association");
+    expect(result.runs.map((run) => run.runId)).toEqual(["run-assoc-1"]);
   });
 
-  it("maps fallback run linkage from executionRunId when runId is absent", async () => {
+  it("keeps issue-derived fallback as last resort", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -78,10 +118,13 @@ describe("paperclip-runs compatibility fallback", () => {
         const pathWithQuery = `${url.pathname}${url.search}`;
 
         if (
+          pathWithQuery.startsWith("/api/heartbeat-runs") ||
           pathWithQuery.startsWith("/api/runs") ||
           pathWithQuery.startsWith("/api/run-logs") ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/heartbeat-runs`) ||
           pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs`) ||
-          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`)
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`) ||
+          pathWithQuery.startsWith("/api/issues/issue-exec/runs")
         ) {
           return new Response("not found", { status: 404 });
         }
@@ -109,38 +152,31 @@ describe("paperclip-runs compatibility fallback", () => {
     );
 
     const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
+    expect(result.sourcePath).toContain(`/api/companies/${COMPANY_ID}/issues`);
+    expect(result.sourcePath).toContain("#derived_from_issues");
     expect(result.runs.map((run) => run.runId)).toEqual(["run-exec-1"]);
   });
 
-  it("maps fallback run linkage from activeRun.id when top-level run ids are absent", async () => {
+  it("uses heartbeat run events as primary source", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
         const pathWithQuery = `${url.pathname}${url.search}`;
 
-        if (
-          pathWithQuery.startsWith("/api/runs") ||
-          pathWithQuery.startsWith("/api/run-logs") ||
-          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs`) ||
-          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs`)
-        ) {
-          return new Response("not found", { status: 404 });
-        }
-
-        if (pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/issues`)) {
+        if (pathWithQuery.startsWith("/api/heartbeat-runs/run-123/events")) {
           return new Response(
             JSON.stringify({
-              issues: [
+              events: [
                 {
-                  id: "issue-active",
-                  title: "Issue active linkage",
-                  status: "in_progress",
-                  activeRun: {
-                    id: "run-active-1"
-                  },
-                  updatedAt: "2026-04-10T10:00:00.000Z",
-                  assigneeAgentId: "agent-1"
+                  id: "evt-1",
+                  type: "run.started",
+                  timestamp: "2026-04-10T10:00:00.000Z"
+                },
+                {
+                  id: "evt-2",
+                  type: "run.succeeded",
+                  timestamp: "2026-04-10T10:01:00.000Z"
                 }
               ]
             }),
@@ -152,27 +188,22 @@ describe("paperclip-runs compatibility fallback", () => {
       })
     );
 
-    const result = await listRuns(createClient(), 5, { companyId: COMPANY_ID });
-    expect(result.runs.map((run) => run.runId)).toEqual(["run-active-1"]);
+    const result = await getRunEvents(createClient(), "run-123", {
+      companyId: COMPANY_ID
+    });
+
+    expect(result.sourcePath).toContain("/api/heartbeat-runs/run-123/events");
+    expect(result.events.map((event) => event.type)).toEqual(["run.started", "run.succeeded"]);
   });
 
-  it("falls back to issue comments for run events when run event routes are unavailable", async () => {
+  it("uses issue association fallback for run events before issue-derived fallback", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
         const pathWithQuery = `${url.pathname}${url.search}`;
 
-        if (
-          pathWithQuery.startsWith("/api/runs/run-123") ||
-          pathWithQuery.startsWith("/api/run-logs/run-123") ||
-          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs/run-123`) ||
-          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs/run-123`)
-        ) {
-          return new Response("not found", { status: 404 });
-        }
-
-        if (pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/issues`)) {
+        if (pathWithQuery.startsWith("/api/heartbeat-runs/run-123/issues")) {
           return new Response(
             JSON.stringify({
               issues: [
@@ -180,7 +211,6 @@ describe("paperclip-runs compatibility fallback", () => {
                   id: "issue-1",
                   title: "Issue 1",
                   status: "in_progress",
-                  runId: "run-123",
                   updatedAt: "2026-04-10T10:00:00.000Z",
                   assigneeAgentId: "agent-1"
                 }
@@ -188,6 +218,18 @@ describe("paperclip-runs compatibility fallback", () => {
             }),
             { status: 200, headers: { "Content-Type": "application/json" } }
           );
+        }
+
+        if (
+          pathWithQuery.startsWith("/api/heartbeat-runs/run-123/events") ||
+          pathWithQuery === "/api/heartbeat-runs/run-123" ||
+          pathWithQuery.startsWith("/api/runs/run-123") ||
+          pathWithQuery.startsWith("/api/run-logs/run-123") ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/heartbeat-runs/run-123`) ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/runs/run-123`) ||
+          pathWithQuery.startsWith(`/api/companies/${COMPANY_ID}/run-logs/run-123`)
+        ) {
+          return new Response("not found", { status: 404 });
         }
 
         if (pathWithQuery.startsWith("/api/issues/issue-1/comments")) {
@@ -213,7 +255,7 @@ describe("paperclip-runs compatibility fallback", () => {
     const result = await getRunEvents(createClient(), "run-123", {
       companyId: COMPANY_ID
     });
-    expect(result.sourcePath).toContain("/api/issues/issue-1/comments");
+    expect(result.sourcePath).toContain("#derived_from_issue_runs_association");
     expect(result.events.some((event) => event.type === "issue_state")).toBe(true);
     expect(result.events.some((event) => event.type === "issue_comment")).toBe(true);
   });
