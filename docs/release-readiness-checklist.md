@@ -13,7 +13,7 @@ It is intentionally repository-focused and does not assume package publishing au
 - [ ] Select and record the intended public-beta scope for this release candidate:
   - issue-centric scope, or
   - run-aware scope.
-- [ ] If run-aware scope is selected, require explicit evidence that run-centric outputs are operationally usable in authenticated target deployment(s).
+- [ ] If run-aware scope is selected, require explicit fresh-case evidence that run-centric outputs are operationally usable in authenticated target deployment(s), including non-empty `trace_handoff`.
 
 ## 2) Setup and environment preflight
 
@@ -57,6 +57,7 @@ It is intentionally repository-focused and does not assume package publishing au
   - issue workflows (`list_issues`, `get_issue_comments`, prioritization, packet flow) must be usable in target authenticated deployment.
 - [ ] For run-aware scope release:
   - `list_runs`, `get_run_events`, and `trace_handoff` must return non-empty, operator-usable results in target authenticated deployment, or the scope must be downgraded to issue-centric.
+  - confirm source linkage contract is present in deployment payloads (`runId` and/or `relatedRunId` aliasing tied to issue/run context).
 
 ## 6) Quality gates
 
@@ -82,3 +83,4 @@ It is intentionally repository-focused and does not assume package publishing au
   - whether package publication is explicitly deferred.
 - [ ] For every skipped validation item, record a concrete reason (for example missing credentials, unavailable external source, or not-enabled optional adapter).
 - [ ] If scope is issue-centric, state explicitly that run-centric claims are deferred until upstream/source run-linkage evidence is non-empty in authenticated field validation.
+- [ ] If scope is run-aware, state explicitly that validation was done on authenticated fresh-case evidence and remains deployment-data dependent.

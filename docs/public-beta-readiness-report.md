@@ -2,19 +2,20 @@
 
 ## Current assessment
 
-Current release-candidate status is **conditional go for issue-centric public beta scope**.
-Run-centric investigation is still not operationally usable in the validated authenticated deployment, so run-centric beta claims remain out of scope.
+Current release-candidate status is **public beta go for run-aware scope** in the validated authenticated deployment profile.
+This updates the prior issue-centric-only conditional posture based on fresh authenticated field evidence after upstream/source contract fixes.
 
-### Final authenticated runs revalidation update (2026-04-17)
+### Run-aware revalidation update (2026-04-17)
 
 - Final pass executed on real authenticated server environment with valid credentials.
-- `doctor` result: `paperclipPreflight.status=ok`; prior runs-plane `endpoint_mismatch` blocker is no longer present.
-- Runs path behavior now degrades to explicit fallback (`sourcePath` suffix `#derived_from_issues`) instead of mismatch failure.
-- In this target deployment, run-centric outputs remain empty:
-  - `paperclipDebug.list_runs` -> `totalRuns=0` (fallback source)
-  - `paperclipDebug.get_run_events` -> `totalEvents=0` (fallback source)
-  - `paperclipDebug.trace_handoff` -> `totalTraces=0`
-- Additional signal: `system_snapshot.summary.runs=0`, `prioritize_incidents.summary.hasRunLinkedIncidents=false`, `build_incident_packet` has `hasRunContext=false`.
+- Fresh controlled case confirmed upstream/source now emits run-linked handoff transitions in activity records.
+- Issue payloads now expose stable linkage aliases (`runId`, `relatedRunId`) tied to run context.
+- `paperclipDebug.trace_handoff` is non-empty on fresh authenticated case.
+- Run-aware tool path is operationally usable:
+  - `paperclipDebug.list_runs` -> non-empty run list from heartbeat runs route
+  - `paperclipDebug.get_run_events` -> non-empty run events for fresh run
+  - `paperclipDebug.trace_handoff` -> non-empty trace result for fresh run
+- `paperclipDebug.build_incident_packet` now carries run context and non-empty run events on fresh case.
 
 Evidence used in this pass:
 
@@ -27,8 +28,8 @@ Evidence used in this pass:
   - `npm run mcp:http` + `GET /healthz`
   - Run-centric MCP flow (`list_runs`, `get_run_events`, `trace_handoff`) plus context tools
 - Final validation evidence:
-  - `docs/final-authenticated-runs-revalidation-report.md`
-  - `docs/issue-centric-public-beta-decision.md`
+  - `docs/trace-handoff-fresh-case-root-cause-report.md`
+  - `docs/run-aware-public-beta-decision.md`
 
 ## What is already ready
 
@@ -36,12 +37,12 @@ Evidence used in this pass:
 - `package.json` remains intentionally guarded with `private: true`.
 - Version remains in `0.x` beta posture (`0.1.0`).
 - Repository-facing metadata is present and points to canonical project URLs.
-- Issue-centric scope can be stated explicitly and honestly without claiming run-centric readiness.
+- Run-aware scope can now be stated explicitly with deployment-conditions caveats.
 
 2. Local setup and baseline diagnostics
 - Dependency install succeeded.
 - `doctor` now includes Paperclip preflight compatibility classification.
-- `doctor` no longer reports runs-plane `endpoint_mismatch` in this authenticated deployment.
+- `doctor` no longer reports runs-plane mismatch blocker in validated authenticated deployment.
 - `smoke:live` and transport startup checks pass.
 
 3. Transport baseline
@@ -52,27 +53,23 @@ Evidence used in this pass:
 - Public-beta checklist exists and now captures skipped-item recording and port-conflict handling.
 - Getting-started guidance now includes a concrete authenticated Paperclip deployment quick-check path.
 - Positioning and readiness documents remain aligned with collector-first MCP direction.
-- Issue-centric decision framing is now documented explicitly in `docs/issue-centric-public-beta-decision.md`.
+- Run-aware decision framing is documented in `docs/run-aware-public-beta-decision.md`.
 
 ## What is not yet fully validated
 
-1. Run-centric operational usability in authenticated deployment
-- Final authenticated pass completed, but run-centric tools currently return empty data only.
-- Fallback behavior is explicit and machine-usable, but operationally insufficient for real run investigation in this deployment.
-
-2. Optional adapter deep validation
+1. Optional adapter deep validation
 - WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this pass, so only skip-path behavior was validated.
 
-3. Auth-enabled HTTP transport behavior
+2. Auth-enabled HTTP transport behavior
 - `MCP_HTTP_AUTH_TOKEN` was not set in this pass, so token-protected HTTP validation was not executed.
 
-## Blocking issues before run-centric public beta claims
+## Remaining cautions before broad rollout
 
-1. Run-centric path remains non-usable in target authenticated deployment
-- Evidence: `list_runs.totalRuns=0`, `get_run_events.totalEvents=0`, `trace_handoff.totalTraces=0`.
+1. Run-aware validity remains deployment-data dependent
+- If upstream/source stops emitting run-linked transitions or linkage aliases regress, handoff traces can degrade again.
 
-2. Incident packet remains issue-only for validated context
-- Evidence: `build_incident_packet.packetReadiness.checks.hasRunContext=false` and `runEvents=0`.
+2. Optional adapters still require environment-specific confirmation
+- Core Paperclip run/issue path is validated, but optional integrations remain outside this pass.
 
 ## Non-blocking follow-ups after public beta
 
@@ -87,15 +84,15 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: conditional go for issue-centric scope; no-go for run-centric claims.**
+**Recommendation: public beta go for run-aware scope in validated authenticated deployments.**
 
 Reasoning:
 
-- Authenticated mismatch blocker is resolved and fallback signaling is explicit.
-- Issue-centric workflows are validated and useful in the target deployment.
-- Run-centric workflows remain empty because deployment source run-linkage data is currently null in practice.
+- Authenticated mismatch blocker is resolved.
+- Upstream/source now emits run-linked handoff transitions and issue linkage aliases.
+- Issue-centric and run-aware workflows are both validated as operationally usable on fresh authenticated field case.
 
 Scope guard for public beta messaging:
 
-- Allowed now: issue-centric investigation value proposition.
-- Deferred: run-centric investigation promises until upstream/source evidence shows non-empty run linkage and usable run/event/handoff outputs in authenticated field validation.
+- Allowed now: issue-centric plus run-aware investigation value proposition.
+- Required caveat: run-aware behavior is guaranteed only for deployments that expose equivalent source linkage contracts and run-linked transition data.
