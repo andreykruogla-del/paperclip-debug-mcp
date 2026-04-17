@@ -28,6 +28,7 @@
   - source must emit run-linked transition records,
   - issue payload linkage aliases must remain present and stable.
 - Optional adapters (WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, Redis) were not deep-validated in this decision pass.
+- Beta messaging should describe this as validated for matching authenticated deployment profiles, not as universal compatibility.
 
 ## Safe public beta scope now
 

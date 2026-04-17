@@ -96,3 +96,4 @@ Scope guard for public beta messaging:
 
 - Allowed now: issue-centric plus run-aware investigation value proposition.
 - Required caveat: run-aware behavior is guaranteed only for deployments that expose equivalent source linkage contracts and run-linked transition data.
+- Launch wording should stay practical: validated in authenticated deployments that match this profile, without universal-compatibility claims.

@@ -50,10 +50,22 @@ Latest authenticated field validation supports a run-aware public beta scope in 
 - Validated as usable now: run-aware investigation (`list_runs`, `get_run_events`, `trace_handoff`) on fresh authenticated field cases after upstream linkage-contract fixes.
 - Deployment caveat: run-aware outputs still depend on source deployment emitting run-linked transition data and exposing stable linkage aliases in issue payloads.
 
-For the current release decision, see:
+## Public Beta Value
+
+What teams can use in this beta today:
+
+- build issue-first and run-aware triage flows from one MCP surface;
+- move from incident signal to run/event/handoff context without context-switching tools;
+- generate evidence packets that preserve issue and run context for handoff.
+
+This beta is best suited for authenticated Paperclip deployments where run-linked transition data is available from source APIs.
+
+For launch posture and decision details, see:
 
 - `docs/run-aware-public-beta-decision.md`
 - `docs/public-beta-readiness-report.md`
+- `docs/public-beta-announcement-draft.md`
+- `docs/public-beta-adopter-notes.md`
 
 ## Quick Start
 
@@ -153,6 +165,7 @@ Current validated public-beta posture:
 
 - Issue-centric scope: validated for authenticated deployment.
 - Run-aware scope: validated for authenticated deployment where upstream/source emits run-linked handoff transitions and issue linkage aliases.
+- Optional adapters: available, but not broadly validated in this release decision pass.
 
 ## Public Beta Surface
 

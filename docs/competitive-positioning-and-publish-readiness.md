@@ -88,6 +88,7 @@ Positioning implication:
 
 - External public-beta messaging can include both issue-centric and run-aware investigation value.
 - Messaging should still note deployment dependence: run-aware behavior assumes source deployments emit stable run-linked transition data and linkage aliases.
+- Launch narrative should stay operator-centric (triage speed, evidence continuity, handoff quality), not broad platform marketing.
 
 ## Must-have before public beta
 
