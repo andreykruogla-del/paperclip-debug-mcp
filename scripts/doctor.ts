@@ -84,7 +84,10 @@ async function runPaperclipPreflight(): Promise<{
   let hasError = false;
 
   try {
-    const { runs, sourcePath } = await listRuns(client, 5);
+    const { runs, sourcePath } = await listRuns(client, 5, {
+      companyId,
+      projectId
+    });
     preflight.checks.runs = {
       status: "ok",
       sourcePath,
