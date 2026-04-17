@@ -33,6 +33,14 @@ type RunsLookupOptions = {
   companyId?: string;
   projectId?: string;
 };
+type LinkedIssueRef = {
+  issueId: string;
+  title?: string;
+  updatedAt?: number;
+  assigneeAgentId?: string;
+  assigneeAgentName?: string;
+  priority?: string;
+};
 
 function pickRunId(run: RunShape): string | undefined {
   return (
@@ -136,38 +144,30 @@ export async function listRuns(
   options?: RunsLookupOptions
 ): Promise<{ runs: PaperclipRunSummary[]; sourcePath: string }> {
   const companyId = firstString(options?.companyId);
-  const endpoints = [
-    `/api/runs?limit=${limit}`,
-    `/api/runs?take=${limit}`,
-    `/api/run-logs?limit=${limit}`
-  ];
-  if (companyId) {
-    endpoints.push(
-      `/api/companies/${encodeURIComponent(companyId)}/runs?limit=${limit}`,
-      `/api/companies/${encodeURIComponent(companyId)}/runs?take=${limit}`,
-      `/api/companies/${encodeURIComponent(companyId)}/run-logs?limit=${limit}`,
-      `/api/companies/${encodeURIComponent(companyId)}/run-logs?take=${limit}`
-    );
-  }
+  const endpoints = buildRunListEndpoints(limit, companyId);
   try {
     const { payload, path } = await client.getFirst(endpoints);
     const rows = client.extractArray<RunShape>(payload, ["runs", "items", "data", "results"]);
-    const mapped = rows
-      .map((row) => mapRun(row, path))
-      .filter((row): row is PaperclipRunSummary => Boolean(row))
-      .map((row) => ({
-        ...row,
-        error: redactSensitiveText(row.error)
-      }))
-      .sort((a, b) => b.startedAt - a.startedAt);
-    return { runs: mapped, sourcePath: path };
+    const mapped = mapRuns(rows, path);
+    if (mapped.length > 0 || !companyId) {
+      return { runs: mapped, sourcePath: path };
+    }
   } catch (error: unknown) {
     const normalized = classifyPaperclipError(error);
     if (normalized.category !== "endpoint_mismatch" || !companyId) {
       throw error;
     }
-    return listRunsFromIssues(client, limit, companyId, firstString(options?.projectId));
   }
+  const fromAssociations = await listRunsFromIssueRunAssociations(
+    client,
+    limit,
+    companyId,
+    firstString(options?.projectId)
+  );
+  if (fromAssociations.runs.length > 0) {
+    return fromAssociations;
+  }
+  return listRunsFromIssues(client, limit, companyId, firstString(options?.projectId));
 }
 
 export async function getRunEvents(
@@ -176,33 +176,168 @@ export async function getRunEvents(
   options?: RunsLookupOptions
 ): Promise<{ events: PaperclipRunEvent[]; sourcePath: string }> {
   const companyId = firstString(options?.companyId);
-  const encoded = encodeURIComponent(runId);
-  const endpoints = [
-    `/api/runs/${encoded}/events`,
-    `/api/run-logs/${encoded}/events`,
-    `/api/runs/${encoded}`
-  ];
-  if (companyId) {
-    endpoints.push(
-      `/api/companies/${encodeURIComponent(companyId)}/runs/${encoded}/events`,
-      `/api/companies/${encodeURIComponent(companyId)}/run-logs/${encoded}/events`,
-      `/api/companies/${encodeURIComponent(companyId)}/runs/${encoded}`
-    );
-  }
+  const endpoints = buildRunEventEndpoints(runId, companyId);
   try {
     const { payload, path } = await client.getFirst(endpoints);
     const eventRows = client.extractArray<EventShape>(payload, ["events", "items", "data", "results"]);
     const events = eventRows
       .map((event, idx) => mapEvent(runId, event, path, idx))
       .sort((a, b) => a.timestamp - b.timestamp);
-    return { events, sourcePath: path };
+    if (events.length > 0 || !companyId) {
+      return { events, sourcePath: path };
+    }
   } catch (error: unknown) {
     const normalized = classifyPaperclipError(error);
     if (normalized.category !== "endpoint_mismatch" || !companyId) {
       throw error;
     }
-    return getRunEventsFromIssues(client, runId, companyId, firstString(options?.projectId));
   }
+  const fromAssociations = await getRunEventsFromIssueRunAssociations(
+    client,
+    runId,
+    companyId,
+    firstString(options?.projectId)
+  );
+  if (fromAssociations.events.length > 0) {
+    return fromAssociations;
+  }
+  return getRunEventsFromIssues(client, runId, companyId, firstString(options?.projectId));
+}
+
+function buildRunListEndpoints(limit: number, companyId?: string): string[] {
+  const endpoints = [
+    `/api/heartbeat-runs?limit=${limit}`,
+    `/api/heartbeat-runs?take=${limit}`,
+    `/api/runs?limit=${limit}`,
+    `/api/runs?take=${limit}`,
+    `/api/run-logs?limit=${limit}`
+  ];
+  if (companyId) {
+    const encodedCompanyId = encodeURIComponent(companyId);
+    endpoints.push(
+      `/api/companies/${encodedCompanyId}/heartbeat-runs?limit=${limit}`,
+      `/api/companies/${encodedCompanyId}/heartbeat-runs?take=${limit}`,
+      `/api/companies/${encodedCompanyId}/runs?limit=${limit}`,
+      `/api/companies/${encodedCompanyId}/runs?take=${limit}`,
+      `/api/companies/${encodedCompanyId}/run-logs?limit=${limit}`,
+      `/api/companies/${encodedCompanyId}/run-logs?take=${limit}`
+    );
+  }
+  return endpoints;
+}
+
+function buildRunEventEndpoints(runId: string, companyId?: string): string[] {
+  const encodedRunId = encodeURIComponent(runId);
+  const endpoints = [
+    `/api/heartbeat-runs/${encodedRunId}/events`,
+    `/api/heartbeat-runs/${encodedRunId}`,
+    `/api/runs/${encodedRunId}/events`,
+    `/api/run-logs/${encodedRunId}/events`,
+    `/api/runs/${encodedRunId}`
+  ];
+  if (companyId) {
+    const encodedCompanyId = encodeURIComponent(companyId);
+    endpoints.push(
+      `/api/companies/${encodedCompanyId}/heartbeat-runs/${encodedRunId}/events`,
+      `/api/companies/${encodedCompanyId}/heartbeat-runs/${encodedRunId}`,
+      `/api/companies/${encodedCompanyId}/runs/${encodedRunId}/events`,
+      `/api/companies/${encodedCompanyId}/run-logs/${encodedRunId}/events`,
+      `/api/companies/${encodedCompanyId}/runs/${encodedRunId}`
+    );
+  }
+  return endpoints;
+}
+
+function mapRuns(rows: RunShape[], sourcePath: string): PaperclipRunSummary[] {
+  return rows
+    .map((row) => mapRun(row, sourcePath))
+    .filter((row): row is PaperclipRunSummary => Boolean(row))
+    .map((row) => ({
+      ...row,
+      error: redactSensitiveText(row.error)
+    }))
+    .sort((a, b) => b.startedAt - a.startedAt);
+}
+
+function mapLinkedIssueRef(issue: Record<string, unknown>): LinkedIssueRef | null {
+  const issueId = firstString(issue.issueId) ?? firstString(issue.id);
+  if (!issueId) return null;
+  const assigneeAgent = issue.assigneeAgent && typeof issue.assigneeAgent === "object"
+    ? (issue.assigneeAgent as Record<string, unknown>)
+    : undefined;
+  return {
+    issueId,
+    title: firstString(issue.title),
+    updatedAt: toTimestamp(
+      (issue.updatedAt as string | number | undefined) ??
+        (issue.createdAt as string | number | undefined)
+    ),
+    assigneeAgentId: firstString(issue.assigneeAgentId),
+    assigneeAgentName: firstString(assigneeAgent?.name),
+    priority: firstString(issue.priority)
+  };
+}
+
+async function fetchIssueRuns(
+  client: PaperclipApiClient,
+  issueId: string
+): Promise<{ runs: RunShape[]; sourcePath: string }> {
+  const path = `/api/issues/${encodeURIComponent(issueId)}/runs`;
+  const payload = await client.get(path);
+  return {
+    runs: client.extractArray<RunShape>(payload, ["runs", "items", "data", "results"]),
+    sourcePath: path
+  };
+}
+
+async function listRunsFromIssueRunAssociations(
+  client: PaperclipApiClient,
+  limit: number,
+  companyId: string,
+  projectId?: string
+): Promise<{ runs: PaperclipRunSummary[]; sourcePath: string }> {
+  const issueLimit = Math.max(30, Math.min(200, limit * 5));
+  const { issues, sourcePath } = await listIssues(client, companyId, projectId, issueLimit, undefined);
+  const runById = new Map<string, PaperclipRunSummary>();
+  let usedSourcePath = `${sourcePath}#derived_from_issue_runs_association`;
+  let associationAvailable = false;
+
+  for (const issue of issues) {
+    try {
+      const issueRunsResult = await fetchIssueRuns(client, issue.issueId);
+      associationAvailable = true;
+      usedSourcePath = `${issueRunsResult.sourcePath}#derived_from_issue_runs_association`;
+      const mappedRuns = mapRuns(issueRunsResult.runs, issueRunsResult.sourcePath);
+      for (const run of mappedRuns) {
+        const existing = runById.get(run.runId);
+        if (existing && existing.startedAt >= run.startedAt) {
+          continue;
+        }
+        runById.set(run.runId, run);
+      }
+    } catch (error: unknown) {
+      const normalized = classifyPaperclipError(error);
+      if (normalized.category === "endpoint_mismatch") {
+        break;
+      }
+      throw error;
+    }
+  }
+
+  if (!associationAvailable) {
+    return {
+      runs: [],
+      sourcePath: `${sourcePath}#issue_runs_association_unavailable`
+    };
+  }
+
+  const runs = Array.from(runById.values())
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, limit);
+  return {
+    runs,
+    sourcePath: usedSourcePath
+  };
 }
 
 async function listRunsFromIssues(
@@ -290,5 +425,110 @@ async function getRunEventsFromIssues(
   return {
     events,
     sourcePath: `${primarySourcePath}#derived_from_issue_comments`
+  };
+}
+
+async function resolveIssuesByRunAssociation(
+  client: PaperclipApiClient,
+  runId: string,
+  companyId: string,
+  projectId?: string
+): Promise<{ issues: LinkedIssueRef[]; sourcePath: string }> {
+  const encodedRunId = encodeURIComponent(runId);
+  try {
+    const path = `/api/heartbeat-runs/${encodedRunId}/issues`;
+    const payload = await client.get(path);
+    const rows = client.extractArray<Record<string, unknown>>(payload, ["issues", "items", "data", "results"]);
+    const issues = rows
+      .map((row) => mapLinkedIssueRef(row))
+      .filter((row): row is LinkedIssueRef => Boolean(row));
+    if (issues.length > 0) {
+      return {
+        issues,
+        sourcePath: `${path}#derived_from_issue_runs_association`
+      };
+    }
+  } catch (error: unknown) {
+    const normalized = classifyPaperclipError(error);
+    if (normalized.category !== "endpoint_mismatch") {
+      throw error;
+    }
+  }
+
+  const { issues, sourcePath } = await listIssues(client, companyId, projectId, 200, undefined);
+  const linkedIssues: LinkedIssueRef[] = [];
+  for (const issue of issues) {
+    try {
+      const issueRunsResult = await fetchIssueRuns(client, issue.issueId);
+      const hasRun = issueRunsResult.runs.some((run) => pickRunId(run) === runId);
+      if (!hasRun) continue;
+      linkedIssues.push({
+        issueId: issue.issueId,
+        title: issue.title,
+        updatedAt: issue.updatedAt,
+        assigneeAgentId: issue.assigneeAgentId,
+        assigneeAgentName: issue.assigneeAgentName,
+        priority: issue.priority
+      });
+    } catch (error: unknown) {
+      const normalized = classifyPaperclipError(error);
+      if (normalized.category === "endpoint_mismatch") {
+        break;
+      }
+      throw error;
+    }
+  }
+  return {
+    issues: linkedIssues,
+    sourcePath: `${sourcePath}#derived_from_issue_runs_association`
+  };
+}
+
+async function getRunEventsFromIssueRunAssociations(
+  client: PaperclipApiClient,
+  runId: string,
+  companyId: string,
+  projectId?: string
+): Promise<{ events: PaperclipRunEvent[]; sourcePath: string }> {
+  const relatedIssuesResult = await resolveIssuesByRunAssociation(client, runId, companyId, projectId);
+  if (relatedIssuesResult.issues.length === 0) {
+    return {
+      events: [],
+      sourcePath: relatedIssuesResult.sourcePath
+    };
+  }
+
+  const events: PaperclipRunEvent[] = [];
+  let primarySourcePath = relatedIssuesResult.sourcePath;
+  for (const issue of relatedIssuesResult.issues) {
+    events.push({
+      id: `${issue.issueId}-issue-state`,
+      runId,
+      agentId: issue.assigneeAgentId ?? issue.assigneeAgentName,
+      timestamp: issue.updatedAt ?? Date.now(),
+      type: "issue_state",
+      level: issue.priority,
+      message: issue.title,
+      sourcePath: `${relatedIssuesResult.sourcePath}#issue`
+    });
+    const commentsResult = await getIssueComments(client, issue.issueId);
+    primarySourcePath = commentsResult.sourcePath;
+    for (const comment of commentsResult.comments) {
+      events.push({
+        id: comment.commentId,
+        runId,
+        agentId: comment.authorId,
+        timestamp: comment.createdAt,
+        type: "issue_comment",
+        message: comment.body,
+        sourcePath: `${commentsResult.sourcePath}#derived_from_issue_comments`
+      });
+    }
+  }
+
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  return {
+    events,
+    sourcePath: `${primarySourcePath}#derived_from_issue_runs_association`
   };
 }
