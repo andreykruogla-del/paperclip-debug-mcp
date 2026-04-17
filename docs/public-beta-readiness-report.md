@@ -2,8 +2,8 @@
 
 ## Current assessment
 
-Current release-candidate status is **still no-go after final authenticated runs-path revalidation**.
-The runs-plane mismatch blocker signal is resolved, but run-centric investigation is not yet operationally usable in the validated authenticated deployment.
+Current release-candidate status is **conditional go for issue-centric public beta scope**.
+Run-centric investigation is still not operationally usable in the validated authenticated deployment, so run-centric beta claims remain out of scope.
 
 ### Final authenticated runs revalidation update (2026-04-17)
 
@@ -28,6 +28,7 @@ Evidence used in this pass:
   - Run-centric MCP flow (`list_runs`, `get_run_events`, `trace_handoff`) plus context tools
 - Final validation evidence:
   - `docs/final-authenticated-runs-revalidation-report.md`
+  - `docs/issue-centric-public-beta-decision.md`
 
 ## What is already ready
 
@@ -35,6 +36,7 @@ Evidence used in this pass:
 - `package.json` remains intentionally guarded with `private: true`.
 - Version remains in `0.x` beta posture (`0.1.0`).
 - Repository-facing metadata is present and points to canonical project URLs.
+- Issue-centric scope can be stated explicitly and honestly without claiming run-centric readiness.
 
 2. Local setup and baseline diagnostics
 - Dependency install succeeded.
@@ -50,6 +52,7 @@ Evidence used in this pass:
 - Public-beta checklist exists and now captures skipped-item recording and port-conflict handling.
 - Getting-started guidance now includes a concrete authenticated Paperclip deployment quick-check path.
 - Positioning and readiness documents remain aligned with collector-first MCP direction.
+- Issue-centric decision framing is now documented explicitly in `docs/issue-centric-public-beta-decision.md`.
 
 ## What is not yet fully validated
 
@@ -63,7 +66,7 @@ Evidence used in this pass:
 3. Auth-enabled HTTP transport behavior
 - `MCP_HTTP_AUTH_TOKEN` was not set in this pass, so token-protected HTTP validation was not executed.
 
-## Blocking issues before public beta
+## Blocking issues before run-centric public beta claims
 
 1. Run-centric path remains non-usable in target authenticated deployment
 - Evidence: `list_runs.totalRuns=0`, `get_run_events.totalEvents=0`, `trace_handoff.totalTraces=0`.
@@ -84,10 +87,15 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: still no-go.**
+**Recommendation: conditional go for issue-centric scope; no-go for run-centric claims.**
 
 Reasoning:
 
 - Authenticated mismatch blocker is resolved and fallback signaling is explicit.
-- However, run-centric investigation path is not truly usable in the validated deployment.
-- Public beta should wait until authenticated run-centric data path returns actionable run/event/handoff context (or accepted fallback criteria are explicitly met with non-empty run-linked evidence).
+- Issue-centric workflows are validated and useful in the target deployment.
+- Run-centric workflows remain empty because deployment source run-linkage data is currently null in practice.
+
+Scope guard for public beta messaging:
+
+- Allowed now: issue-centric investigation value proposition.
+- Deferred: run-centric investigation promises until upstream/source evidence shows non-empty run linkage and usable run/event/handoff outputs in authenticated field validation.

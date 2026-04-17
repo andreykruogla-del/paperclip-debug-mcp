@@ -77,6 +77,18 @@ This project overlaps with adjacent categories, but sits in a specific layer:
 6. Environment-dependent validation completeness
 - Full public-beta confidence still depends on running the same validation pass in a configured environment with Paperclip credentials and selected dependency adapters.
 
+## Current beta-scope decision posture
+
+Based on latest authenticated field validation in the target deployment:
+
+- Issue-centric investigation is validated as usable.
+- Run-centric investigation remains operationally empty in that deployment because source issue-to-run linkage values are currently null.
+
+Positioning implication:
+
+- External public-beta messaging should be issue-centric now.
+- Run-centric claims should remain deferred until upstream source data supports non-empty run-linked outputs in field validation.
+
 ## Must-have before public beta
 
 1. Stable first-response triage experience

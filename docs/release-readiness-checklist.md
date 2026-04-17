@@ -10,6 +10,10 @@ It is intentionally repository-focused and does not assume package publishing au
 - [ ] Confirm version string is appropriate for current maturity (`0.x` beta posture).
 - [ ] Confirm repository metadata (`repository`, `homepage`, `bugs`) points to the canonical project.
 - [ ] Confirm no unreviewed release-surface change is bundled with unrelated feature work.
+- [ ] Select and record the intended public-beta scope for this release candidate:
+  - issue-centric scope, or
+  - run-aware scope.
+- [ ] If run-aware scope is selected, require explicit evidence that run-centric outputs are operationally usable in authenticated target deployment(s).
 
 ## 2) Setup and environment preflight
 
@@ -49,6 +53,10 @@ It is intentionally repository-focused and does not assume package publishing au
 - [ ] Confirm outputs are machine-usable and include current triage guidance fields where expected.
 - [ ] For Paperclip-backed tool failures, confirm structured error payloads include machine-usable fields (`errorType`, `source`, `httpStatus` when known, `remediation`).
 - [ ] Confirm run/issue/service and packet paths remain callable and coherent.
+- [ ] For issue-centric scope release:
+  - issue workflows (`list_issues`, `get_issue_comments`, prioritization, packet flow) must be usable in target authenticated deployment.
+- [ ] For run-aware scope release:
+  - `list_runs`, `get_run_events`, and `trace_handoff` must return non-empty, operator-usable results in target authenticated deployment, or the scope must be downgraded to issue-centric.
 
 ## 6) Quality gates
 
@@ -73,3 +81,4 @@ It is intentionally repository-focused and does not assume package publishing au
   - what remains intentionally out of scope for this release,
   - whether package publication is explicitly deferred.
 - [ ] For every skipped validation item, record a concrete reason (for example missing credentials, unavailable external source, or not-enabled optional adapter).
+- [ ] If scope is issue-centric, state explicitly that run-centric claims are deferred until upstream/source run-linkage evidence is non-empty in authenticated field validation.
