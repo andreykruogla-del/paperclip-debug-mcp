@@ -2,33 +2,32 @@
 
 ## Current assessment
 
-Current release-candidate status is **improved but still pending one fresh authenticated re-validation pass**.
-The highest-value Paperclip blockers were addressed in onboarding, preflight/smoke signaling, and structured tool error shaping. A final go/no-go now depends on re-running live authenticated validation against target deployment(s).
+Current release-candidate status is **still no-go after final authenticated runs-path revalidation**.
+The runs-plane mismatch blocker signal is resolved, but run-centric investigation is not yet operationally usable in the validated authenticated deployment.
 
-### Runs-plane blocker closure update (2026-04-17)
+### Final authenticated runs revalidation update (2026-04-17)
 
-- Main blocker focus: `paperclipPreflight.checks.runs` returning `endpoint_mismatch` in authenticated deployments.
-- Compatibility update: runs integration now attempts broader company-scoped run route variants and falls back to issue-derived run/event evidence when dedicated run routes are unavailable.
-- Live route probe evidence against the previously validated deployment (`https://paperclip.simfi-mebel.ru`):
-  - company issues route remained auth-gated (`401`) and therefore reachable (`/api/companies/{companyId}/issues`),
-  - tested run routes remained unavailable (`404`) across previously used and company-scoped variants.
-- Post-change diagnostic probe (with base URL + company id + intentionally invalid token) no longer reports run-plane `endpoint_mismatch`; it now reports `auth_failure`, which indicates route mismatch no longer dominates this path.
-- Remaining closure condition is still a fresh run with valid authenticated credentials to confirm end-to-end run/tool usability in the target deployment.
+- Final pass executed on real authenticated server environment with valid credentials.
+- `doctor` result: `paperclipPreflight.status=ok`; prior runs-plane `endpoint_mismatch` blocker is no longer present.
+- Runs path behavior now degrades to explicit fallback (`sourcePath` suffix `#derived_from_issues`) instead of mismatch failure.
+- In this target deployment, run-centric outputs remain empty:
+  - `paperclipDebug.list_runs` -> `totalRuns=0` (fallback source)
+  - `paperclipDebug.get_run_events` -> `totalEvents=0` (fallback source)
+  - `paperclipDebug.trace_handoff` -> `totalTraces=0`
+- Additional signal: `system_snapshot.summary.runs=0`, `prioritize_incidents.summary.hasRunLinkedIncidents=false`, `build_incident_packet` has `hasRunContext=false`.
 
 Evidence used in this pass:
 
 - Checklist framework: `docs/release-readiness-checklist.md`
-- Runtime/diagnostic commands run locally on this branch:
+- Runtime/diagnostic commands run in authenticated server environment:
   - `npm install`
   - `npm run doctor`
   - `npm run smoke:live`
-  - `npm run mcp:stdio` (startup validation only)
-  - `npm run mcp:http` + `GET /healthz` (validated on `MCP_HTTP_PORT=8799`)
-  - `npm run check`
-  - `npm run test`
-  - `npm run build`
-- Field validation evidence:
-  - `docs/server-independent-evaluation-and-field-validation-report.md`
+  - `npm run mcp:stdio`
+  - `npm run mcp:http` + `GET /healthz`
+  - Run-centric MCP flow (`list_runs`, `get_run_events`, `trace_handoff`) plus context tools
+- Final validation evidence:
+  - `docs/final-authenticated-runs-revalidation-report.md`
 
 ## What is already ready
 
@@ -40,39 +39,37 @@ Evidence used in this pass:
 2. Local setup and baseline diagnostics
 - Dependency install succeeded.
 - `doctor` now includes Paperclip preflight compatibility classification.
-- `smoke:live` now reports explicit degraded signals so Paperclip data-plane issues are harder to misread as healthy.
+- `doctor` no longer reports runs-plane `endpoint_mismatch` in this authenticated deployment.
+- `smoke:live` and transport startup checks pass.
 
 3. Transport baseline
 - `mcp:stdio` starts without immediate runtime failure.
-- HTTP transport health endpoint validated (`200`) on an alternate port (`8799`) because default `8787` was occupied in this environment.
+- HTTP transport health endpoint validated (`200`) in authenticated server run (`/healthz`).
 
-4. Quality gates in current environment
-- `npm run check`: pass
-- `npm run test`: pass
-- `npm run build`: pass
-- Hosted CI for the prior release-candidate branch (`PR #23`) is green (`build-and-test`: success).
-
-5. Documentation/readiness structure
+4. Documentation/readiness structure
 - Public-beta checklist exists and now captures skipped-item recording and port-conflict handling.
 - Getting-started guidance now includes a concrete authenticated Paperclip deployment quick-check path.
 - Positioning and readiness documents remain aligned with collector-first MCP direction.
 
 ## What is not yet fully validated
 
-1. Post-fix authenticated re-validation in target deployment
-- Field findings are now addressed in code/docs, but a fresh live pass is still required to confirm that authenticated run/issue paths are now reliably usable in target deployment(s).
-- In the current local environment used for this branch, Paperclip credentials are not set, so this confirmation cannot be completed here.
+1. Run-centric operational usability in authenticated deployment
+- Final authenticated pass completed, but run-centric tools currently return empty data only.
+- Fallback behavior is explicit and machine-usable, but operationally insufficient for real run investigation in this deployment.
 
 2. Optional adapter deep validation
-- WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this local pass, so only skip-path behavior was validated.
+- WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis were not configured in this pass, so only skip-path behavior was validated.
 
 3. Auth-enabled HTTP transport behavior
 - `MCP_HTTP_AUTH_TOKEN` was not set in this pass, so token-protected HTTP validation was not executed.
 
 ## Blocking issues before public beta
 
-1. Fresh authenticated Paperclip re-validation has not yet been executed after blocker fixes
-- Required closure evidence: successful live run/issue investigation path after applying the new onboarding/preflight/error-shaping improvements.
+1. Run-centric path remains non-usable in target authenticated deployment
+- Evidence: `list_runs.totalRuns=0`, `get_run_events.totalEvents=0`, `trace_handoff.totalTraces=0`.
+
+2. Incident packet remains issue-only for validated context
+- Evidence: `build_incident_packet.packetReadiness.checks.hasRunContext=false` and `runEvents=0`.
 
 ## Non-blocking follow-ups after public beta
 
@@ -87,10 +84,10 @@ Evidence used in this pass:
 
 ## Recommended public beta decision now
 
-**Recommendation: Improved and ready for a fresh server re-validation pass; final public-beta decision remains no-go until that pass is complete.**
+**Recommendation: still no-go.**
 
 Reasoning:
 
-- Repository baseline remains strong (quality gates and core MCP runtime operate).
-- The highest-value authenticated-integration blockers were addressed without scope expansion.
-- One evidence gap remains: a post-fix live authenticated validation pass in target deployment conditions.
+- Authenticated mismatch blocker is resolved and fallback signaling is explicit.
+- However, run-centric investigation path is not truly usable in the validated deployment.
+- Public beta should wait until authenticated run-centric data path returns actionable run/event/handoff context (or accepted fallback criteria are explicitly met with non-empty run-linked evidence).
