@@ -5,6 +5,16 @@
 Current release-candidate status is **improved but still pending one fresh authenticated re-validation pass**.
 The highest-value Paperclip blockers were addressed in onboarding, preflight/smoke signaling, and structured tool error shaping. A final go/no-go now depends on re-running live authenticated validation against target deployment(s).
 
+### Runs-plane blocker closure update (2026-04-17)
+
+- Main blocker focus: `paperclipPreflight.checks.runs` returning `endpoint_mismatch` in authenticated deployments.
+- Compatibility update: runs integration now attempts broader company-scoped run route variants and falls back to issue-derived run/event evidence when dedicated run routes are unavailable.
+- Live route probe evidence against the previously validated deployment (`https://paperclip.simfi-mebel.ru`):
+  - company issues route remained auth-gated (`401`) and therefore reachable (`/api/companies/{companyId}/issues`),
+  - tested run routes remained unavailable (`404`) across previously used and company-scoped variants.
+- Post-change diagnostic probe (with base URL + company id + intentionally invalid token) no longer reports run-plane `endpoint_mismatch`; it now reports `auth_failure`, which indicates route mismatch no longer dominates this path.
+- Remaining closure condition is still a fresh run with valid authenticated credentials to confirm end-to-end run/tool usability in the target deployment.
+
 Evidence used in this pass:
 
 - Checklist framework: `docs/release-readiness-checklist.md`

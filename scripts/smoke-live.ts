@@ -25,7 +25,12 @@ async function main(): Promise<void> {
 
   if (paperclipClient.isEnabled()) {
     try {
-      const { runs, sourcePath } = await listRuns(paperclipClient, 5);
+      const companyId = process.env.PAPERCLIP_COMPANY_ID;
+      const projectId = process.env.PAPERCLIP_PROJECT_ID;
+      const { runs, sourcePath } = await listRuns(paperclipClient, 5, {
+        companyId,
+        projectId
+      });
       report.paperclip = {
         status: "ok",
         sourcePath,
@@ -33,7 +38,6 @@ async function main(): Promise<void> {
         usability: "usable"
       };
 
-      const companyId = process.env.PAPERCLIP_COMPANY_ID;
       if (companyId) {
         const issueResult = await listIssues(
           paperclipClient,

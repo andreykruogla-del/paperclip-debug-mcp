@@ -663,7 +663,10 @@ export function createMcpServer(): McpServer {
       }
 
       try {
-        const { runs, sourcePath } = await listRuns(paperclipClient, limit ?? 20);
+        const { runs, sourcePath } = await listRuns(paperclipClient, limit ?? 20, {
+          companyId: paperclipCompanyId,
+          projectId: paperclipProjectId
+        });
         return {
           structuredContent: {
             sourcePath,
@@ -819,7 +822,10 @@ export function createMcpServer(): McpServer {
       }
 
       try {
-        const { events, sourcePath } = await getRunEvents(paperclipClient, runId);
+        const { events, sourcePath } = await getRunEvents(paperclipClient, runId, {
+          companyId: paperclipCompanyId,
+          projectId: paperclipProjectId
+        });
         const cut = events.slice(0, limit ?? 1000);
         const runGuidance = buildRunEventsTriageGuidance({
           runId,
@@ -964,9 +970,15 @@ export function createMcpServer(): McpServer {
         }
 
         if (resolvedRunId) {
-          const { runs } = await listRuns(paperclipClient, 200);
+          const { runs } = await listRuns(paperclipClient, 200, {
+            companyId: paperclipCompanyId,
+            projectId: paperclipProjectId
+          });
           runSummary = runs.find((run) => run.runId === resolvedRunId);
-          const eventsResult = await getRunEvents(paperclipClient, resolvedRunId);
+          const eventsResult = await getRunEvents(paperclipClient, resolvedRunId, {
+            companyId: paperclipCompanyId,
+            projectId: paperclipProjectId
+          });
           runEvents = eventsResult.events.slice(0, runEventLimit ?? 1000);
         }
 
@@ -1049,7 +1061,12 @@ export function createMcpServer(): McpServer {
 
       if (paperclipClient.isEnabled()) {
         try {
-          runs = (await listRuns(paperclipClient, runLimit ?? 20)).runs;
+          runs = (
+            await listRuns(paperclipClient, runLimit ?? 20, {
+              companyId: paperclipCompanyId,
+              projectId: paperclipProjectId
+            })
+          ).runs;
           if (paperclipCompanyId) {
             issues = (await listIssues(
               paperclipClient,
