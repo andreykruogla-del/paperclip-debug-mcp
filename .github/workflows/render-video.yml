@@ -1,0 +1,49 @@
+name: Render X Video
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Render portrait explainer
+        run: npm run video:render
+
+      - name: Render terminal showcase
+        run: npm run video:render:terminal
+
+      - name: Render loop source
+        run: npm run video:render:loop
+
+      - name: Convert loop to GIF
+        run: npm run video:make:gif
+
+      - name: Upload media artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paperclip-debug-media
+          path: |
+            out/x-explainer.mp4
+            out/terminal-showcase.mp4
+            out/terminal-loop.mp4
+            out/terminal-loop.gif
+          if-no-files-found: error
