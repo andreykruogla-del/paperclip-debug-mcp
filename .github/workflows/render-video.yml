@@ -22,12 +22,25 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Render video
+      - name: Render portrait explainer
         run: npm run video:render
 
-      - name: Upload MP4 artifact
+      - name: Render terminal showcase
+        run: npm run video:render:terminal
+
+      - name: Render loop source
+        run: npm run video:render:loop
+
+      - name: Convert loop to GIF
+        run: npm run video:make:gif
+
+      - name: Upload media artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: x-explainer-mp4
-          path: out/x-explainer.mp4
+          name: paperclip-debug-media
+          path: |
+            out/x-explainer.mp4
+            out/terminal-showcase.mp4
+            out/terminal-loop.mp4
+            out/terminal-loop.gif
           if-no-files-found: error

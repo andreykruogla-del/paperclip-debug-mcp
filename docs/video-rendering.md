@@ -1,10 +1,16 @@
 # X Video Rendering (Remotion)
 
-This project includes a short X explainer composition:
+This project includes media compositions for X, LinkedIn, and GitHub:
 
 - Composition id: `XExplainer`
+- Composition id: `TerminalShowcase`
+- Composition id: `TerminalLoop`
 - Entry: `video/index.ts`
-- Output target: `out/x-explainer.mp4`
+- Output targets:
+  - `out/x-explainer.mp4`
+  - `out/terminal-showcase.mp4`
+  - `out/terminal-loop.mp4`
+  - `out/terminal-loop.gif` (from loop mp4 + ffmpeg)
 
 ## Local preview
 
@@ -20,6 +26,24 @@ Cross-platform command:
 npm run video:render
 ```
 
+Terminal-first variant:
+
+```bash
+npm run video:render:terminal
+```
+
+Short loop source:
+
+```bash
+npm run video:render:loop
+```
+
+Convert loop source to GIF:
+
+```bash
+npm run video:make:gif
+```
+
 Windows-specific fallback that points to installed Chrome:
 
 ```bash
@@ -33,4 +57,4 @@ If local render is blocked by architecture limits, use GitHub Actions:
 1. Push your branch with `.github/workflows/render-video.yml`.
 2. Open **Actions** -> **Render X Video**.
 3. Click **Run workflow**.
-4. Download the artifact named `x-explainer-mp4`.
+4. Download the artifact named `paperclip-debug-media`.

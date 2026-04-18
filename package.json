@@ -29,7 +29,10 @@
     "test": "vitest run",
     "video:studio": "remotion studio video/index.ts --config video/tsconfig.json",
     "video:render": "remotion render video/index.ts XExplainer out/x-explainer.mp4 --config video/tsconfig.json",
-    "video:render:win": "remotion render video/index.ts XExplainer out/x-explainer.mp4 --config video/tsconfig.json --browser-executable \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\""
+    "video:render:win": "remotion render video/index.ts XExplainer out/x-explainer.mp4 --config video/tsconfig.json --browser-executable \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\"",
+    "video:render:terminal": "remotion render video/index.ts TerminalShowcase out/terminal-showcase.mp4 --config video/tsconfig.json",
+    "video:render:loop": "remotion render video/index.ts TerminalLoop out/terminal-loop.mp4 --config video/tsconfig.json",
+    "video:make:gif": "ffmpeg -y -i out/terminal-loop.mp4 -vf \"fps=12,scale=960:-1:flags=lanczos\" -loop 0 out/terminal-loop.gif"
   },
   "keywords": [
     "paperclip",
