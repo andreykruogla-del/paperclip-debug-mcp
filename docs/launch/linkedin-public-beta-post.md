@@ -1,4 +1,4 @@
-﻿# LinkedIn Public Beta Post
+# LinkedIn Public Beta Post
 
 We're opening a run-aware public beta for Paperclip Debug MCP.
 

@@ -1,4 +1,4 @@
-﻿# Early Beta Outreach
+# Early Beta Outreach
 
 Hi - we're running an early run-aware public beta for Paperclip Debug MCP.
 
