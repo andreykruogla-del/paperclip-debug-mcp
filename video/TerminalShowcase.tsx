@@ -111,7 +111,7 @@ export const TerminalShowcase: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  const ctaOpacity = interpolate(frame, [720, 780], [0, 1], {
+  const ctaOpacityFast = interpolate(frame, [570, 640], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -146,7 +146,7 @@ export const TerminalShowcase: React.FC = () => {
           title="Before"
           subtitle="Manual context rebuilding across scattered signals"
           lines={beforeLines}
-          startFrame={40}
+          startFrame={26}
           frame={frame}
           accent="#FFB98666"
         />
@@ -154,7 +154,7 @@ export const TerminalShowcase: React.FC = () => {
           title="With Paperclip Debug MCP"
           subtitle="Unified investigation through MCP tools"
           lines={afterLines}
-          startFrame={300}
+          startFrame={172}
           frame={frame}
           accent="#8AF6FF66"
         />
@@ -170,7 +170,7 @@ export const TerminalShowcase: React.FC = () => {
           border: "1px solid rgba(138,246,255,0.45)",
           background: "rgba(10,16,26,0.86)",
           padding: "14px 18px",
-          opacity: ctaOpacity,
+          opacity: ctaOpacityFast,
         }}
       >
         <div style={{fontSize: 21, color: "#D6E2EE"}}>

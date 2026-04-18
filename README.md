@@ -8,6 +8,14 @@ It gives operators and coding agents one queryable MCP surface for issue triage,
   <img src="docs/images/paperclip-debug-mcp-hero.jpg" alt="Paperclip Debug MCP - unified MCP investigation layer" width="100%">
 </p>
 
+## Quick Demo
+
+Terminal loop preview (good for README/social snippets):
+
+<p align="center">
+  <img src="docs/images/terminal-loop.gif" alt="Paperclip Debug MCP terminal loop demo" width="100%">
+</p>
+
 ## Why it matters
 
 When incidents are investigated with fragmented tools, teams lose time rebuilding context instead of moving toward root-cause.
@@ -134,6 +142,7 @@ For authenticated deployments, use the Paperclip quick-check subsection in `docs
 - [Run-Aware Public Beta Decision](docs/run-aware-public-beta-decision.md): current safe public-beta scope and deployment conditions.
 - [Issue-Centric Public Beta Decision](docs/issue-centric-public-beta-decision.md): historical constrained decision note superseded by run-aware validation.
 - [Video Rendering](docs/video-rendering.md): render the short X explainer video with Remotion (local or CI).
+- [Social Captions](docs/social-captions.md): ready-to-post text for X and LinkedIn.
 
 ## MCP Tools
 

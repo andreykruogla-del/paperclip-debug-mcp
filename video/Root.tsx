@@ -19,7 +19,7 @@ export const VideoRoot: React.FC = () => {
       <Composition
         id="TerminalShowcase"
         component={TerminalShowcase}
-        durationInFrames={900}
+        durationInFrames={720}
         fps={30}
         width={1280}
         height={720}

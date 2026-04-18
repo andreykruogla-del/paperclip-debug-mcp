@@ -90,9 +90,10 @@ export const TerminalLoop: React.FC = () => {
           color: "#B7C8D9",
         }}
       >
-        <div>faster triage • clearer handoff • fewer loops</div>
+        <div>faster triage, clearer handoff, fewer loops</div>
         <div style={{color: "#84F6FF", fontWeight: 700}}>early testers open</div>
       </div>
     </AbsoluteFill>
   );
 };
+
