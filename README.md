@@ -1,16 +1,23 @@
 # Paperclip Debug MCP
 
-Paperclip Debug MCP is an MCP-first debugging and incident intelligence layer for Paperclip-based agent systems.
+Paperclip Debug MCP is an MCP-first incident investigation layer for Paperclip-based agent systems.
+
+It gives operators and coding agents one queryable MCP surface for issue triage, run-aware investigation, service context, and handoff evidence - without jumping across disconnected logs, issue threads, and infrastructure tools.
 
 <p align="center">
   <img src="docs/images/paperclip-debug-mcp-hero.jpg" alt="Paperclip Debug MCP - unified MCP investigation layer" width="100%">
 </p>
 
-## What It Is and Why
+## Why it matters
 
-When incidents are investigated with disconnected tools, teams lose time rebuilding context from logs, run events, issue threads, and infrastructure signals.
+When incidents are investigated with fragmented tools, teams lose time rebuilding context instead of moving toward root-cause.
 
-Paperclip Debug MCP provides one queryable interface so coding agents can retrieve structured evidence and move faster to actionable root-cause hypotheses.
+Paperclip Debug MCP reduces that context fragmentation by exposing one structured investigation surface for:
+
+- issue-centric triage
+- run-aware investigation
+- handoff tracing
+- evidence packet generation
 
 Observed impact from internal tests (directional ranges, not guarantees):
 
@@ -19,57 +26,77 @@ Observed impact from internal tests (directional ranges, not guarantees):
 - Tokens per resolved incident: `-25% to -65%`
 - Time to build evidence packet: `-60% to -95%`
 
-What this project is not:
+## What this project is
 
-- It is not a replacement for a full observability platform.
-- It is not a UI/dashboard product in this repository.
-- It is not a non-MCP primary interface.
+Paperclip Debug MCP is an investigation backend for operators and coding agents.
 
-## Unified Control Layer
+It combines:
 
-The core product idea is a single control layer with adapters, instead of a fragmented stack of standalone debugging utilities.
+- collector-backed runtime signals
+- incident normalization and analysis
+- investigation tools for runs, issues, services, and adapters
+- evidence packet construction for escalation and handoff
 
-This layer:
+## What this project is not
 
-- normalizes signals from multiple sources into one incident model;
-- exposes a single MCP surface for investigation workflows;
-- scales through adapter-based extension without rewriting core triage tooling.
+This repository is not:
 
-Current coverage includes Paperclip API, Docker, host file logs, and optional health adapters for WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis.
+- a replacement for a full observability platform
+- a dashboard/UI product in this repository
+- a non-MCP primary interface
+- a broad workflow automation platform
 
-## What You Get
+## What you get
 
-- Faster incident triage and prioritization.
-- Incident clustering by fingerprint and trend analysis.
-- Run-level handoff tracing for investigation continuity (deployment-data dependent).
-- Unified queries for runs, events, issues, comments, services, and logs.
-- Incident packet generation for handoff and audit workflows.
-- Redaction of token-like secrets in returned excerpts.
+- Faster incident triage and prioritization
+- Incident clustering by fingerprint and trend analysis
+- Unified queries for runs, events, issues, comments, services, and logs
+- Run-level handoff tracing for investigation continuity
+- Incident packet generation for handoff and audit workflows
+- Redaction of token-like secrets in returned excerpts
 
-## Public Beta Scope Note
+## Public beta scope
 
-Latest authenticated field validation supports a run-aware public beta scope in the validated authenticated deployment profile.
+This project is currently in active beta.
 
-- Validated as usable now: issue-centric investigation (`list_issues`, `get_issue_comments`, prioritization, packet flow with run context when linked data exists).
-- Validated as usable now: run-aware investigation (`list_runs`, `get_run_events`, `trace_handoff`) on fresh authenticated field cases after upstream linkage-contract fixes.
-- Deployment caveat: run-aware outputs still depend on source deployment emitting run-linked transition data and exposing stable linkage aliases in issue payloads.
+Validated as usable now in the current public-beta posture:
 
-## Public Beta Value
+- issue-centric investigation (`list_issues`, `get_issue_comments`, prioritization, packet flow with run context when linked data exists)
+- run-aware investigation (`list_runs`, `get_run_events`, `trace_handoff`) in validated authenticated deployment profiles
+- one MCP surface for issue, run, event, service, and handoff workflows
 
-What teams can use in this beta today:
+This beta is best suited for authenticated Paperclip deployments where source APIs emit stable run-linked transition data and issue payloads expose stable run linkage aliases.
 
-- build issue-first and run-aware triage flows from one MCP surface;
-- move from incident signal to run/event/handoff context without context-switching tools;
-- generate evidence packets that preserve issue and run context for handoff.
+## Important beta caveat
 
-This beta is best suited for authenticated Paperclip deployments where run-linked transition data is available from source APIs.
+Run-aware behavior remains deployment-data dependent.
 
-For launch posture and decision details, see:
+Public beta messaging should be read as:
 
-- `docs/run-aware-public-beta-decision.md`
+- validated in authenticated deployments matching this profile
+- not a universal-compatibility claim across all deployment shapes
+- not a statement that all optional adapters are broadly validated yet
+
+## Current coverage
+
+Current coverage includes:
+
+- Paperclip API
+- Docker
+- host file logs
+- optional health adapters for WordPress, Caddy, Sentry, Kubernetes, PostgreSQL, and Redis
+
+Optional adapters are available, but they are not yet broadly validated as part of the current public-beta decision surface.
+
+## Quick links
+
+For current beta posture and launch details, see:
+
 - `docs/public-beta-readiness-report.md`
+- `docs/run-aware-public-beta-decision.md`
 - `docs/public-beta-announcement-draft.md`
 - `docs/public-beta-adopter-notes.md`
+- `docs/release-readiness-checklist.md`
 
 ## Quick Start
 
