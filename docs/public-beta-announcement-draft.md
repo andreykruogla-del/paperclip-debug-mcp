@@ -1,8 +1,8 @@
 # Public Beta Announcement Draft
 
-## What this product does
+## Positioning
 
-Paperclip Debug MCP provides a single MCP investigation layer for Paperclip-based systems. It unifies issue, run, event, and service context so operators and coding agents can triage faster and produce clearer handoff evidence.
+Paperclip Debug MCP is an MCP-first incident investigation layer for Paperclip-based agent systems. It gives operators and coding agents one queryable MCP surface for issue triage, run-aware investigation, service context, and handoff evidence.
 
 ## What is validated in this beta
 
@@ -11,32 +11,51 @@ Paperclip Debug MCP provides a single MCP investigation layer for Paperclip-base
 - Run-aware investigation workflows (`list_runs`, `get_run_events`, `trace_handoff`) on fresh authenticated cases.
 - Non-empty handoff tracing in validated deployment profile after upstream/source linkage-contract fixes.
 
-## What environments this beta is best suited for
+## Best-fit deployment profile
 
 - Authenticated Paperclip deployments where source APIs emit run-linked transition data.
-- Deployments where issue payloads expose stable run linkage aliases (for example `runId` / `relatedRunId`).
-- Teams that need practical MCP-first triage and handoff workflows rather than dashboard-first operations.
+- Deployments where issue payloads expose stable run linkage aliases (for example `runId` and `relatedRunId`).
+- Teams that need practical MCP-first triage and handoff workflows.
 
-## What is intentionally not promised
+## What is not being claimed
 
 - Universal compatibility across all deployment shapes.
-- Broad optional-adapter guarantees beyond current validated scope.
-- A replacement for full observability platforms or a dashboard/UI product in this repository.
+- Broad optional-adapter validation beyond the current decision surface.
+- A replacement for a full observability platform.
+- A dashboard/UI product in this repository.
+- A broad workflow automation platform.
 
-## Why this beta is useful now
+## Short announcement copy
 
-- It closes the gap between issue-centric and run-aware investigation in one queryable interface.
-- It reduces manual context stitching across issue threads, run events, and handoff paths.
-- It gives teams a practical way to produce run-aware incident packets for escalation and audit workflows.
+Paperclip Debug MCP is now in run-aware public beta for validated authenticated Paperclip deployments. Teams can use one MCP surface for issue triage, run/event investigation, and handoff tracing, with the deployment-data caveat kept explicit.
 
-## Suggested short announcement copy
+## Medium announcement copy
 
-Paperclip Debug MCP is now in run-aware public beta for validated authenticated Paperclip deployments. Teams can use one MCP surface for issue triage, run/event investigation, and handoff tracing, with practical deployment caveats kept explicit.
+We are opening a run-aware public beta for Paperclip Debug MCP.
 
-## Suggested longer announcement copy
+In validated authenticated deployment profiles, this beta supports issue-centric and run-aware investigation workflows: issue/comment triage, run listing, run event investigation, non-empty handoff tracing, and packet generation with run context.
 
-We are opening a run-aware public beta for Paperclip Debug MCP.  
-In validated authenticated deployment profiles, this beta supports both issue-centric and run-aware investigation workflows: issue and comment triage, run listing, run event analysis, non-empty handoff tracing, and incident packet assembly with run context.
+This is not a universal compatibility claim. Run-aware behavior remains deployment-data dependent on stable run-linked source data and linkage aliases.
 
-This is a practical operations beta, not a broad "works everywhere" launch.  
-Run-aware behavior depends on source deployments exposing stable run-linkage data contracts, and we keep that caveat explicit in release materials. For teams that match the validated profile, the beta is ready for real triage and handoff workflows.
+## Long announcement copy
+
+Paperclip Debug MCP is an MCP-first incident investigation layer for Paperclip-based agent systems.
+
+The practical problem it addresses is context fragmentation: teams often jump between issue threads, run logs, service signals, and ad hoc notes before they can even form a reliable root-cause hypothesis. This beta focuses on reducing that fragmentation with one structured MCP investigation surface.
+
+In the current validated posture, run-aware public beta means:
+
+- authenticated baseline path is validated (`doctor`, `smoke:live`, `mcp:stdio`, `mcp:http`, `/healthz`)
+- issue-centric workflows are usable (`list_issues`, `get_issue_comments`, prioritization, packet flow)
+- run-aware workflows are usable on fresh authenticated cases (`list_runs`, `get_run_events`, `trace_handoff`)
+- non-empty handoff tracing is confirmed in the validated deployment profile
+
+This is intentionally a disciplined launch. It is validated for matching authenticated deployment profiles and remains deployment-data dependent. It is not positioned as a full observability suite, a dashboard/UI product, or a broad workflow automation platform.
+
+## Feedback ask
+
+If you test this beta, we are most interested in practical feedback on:
+
+- setup clarity in authenticated environments
+- whether the run-aware investigation flow reduces manual query loops
+- whether handoff tracing and incident packets are useful for real escalation paths
