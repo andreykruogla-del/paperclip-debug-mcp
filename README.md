@@ -75,6 +75,7 @@ For authenticated deployments, use the Paperclip quick-check subsection in `docs
 - [Collector Adapter Guide](docs/collector-adapter-guide.md): how to add and register new adapters.
 - [Release Readiness Checklist](docs/release-readiness-checklist.md): lightweight public-beta release validation.
 - [Public Beta Readiness Report](docs/public-beta-readiness-report.md): latest release-candidate validation decision memo.
+- [Video Rendering](docs/video-rendering.md): render the short X explainer video with Remotion (local or CI).
 
 ## MCP Tools
 
