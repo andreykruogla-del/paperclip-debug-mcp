@@ -133,6 +133,7 @@ For authenticated deployments, use the Paperclip quick-check subsection in `docs
 - [Public Beta Readiness Report](docs/public-beta-readiness-report.md): latest release-candidate validation decision memo.
 - [Run-Aware Public Beta Decision](docs/run-aware-public-beta-decision.md): current safe public-beta scope and deployment conditions.
 - [Issue-Centric Public Beta Decision](docs/issue-centric-public-beta-decision.md): historical constrained decision note superseded by run-aware validation.
+- [Video Rendering](docs/video-rendering.md): render the short X explainer video with Remotion (local or CI).
 
 ## MCP Tools
 
